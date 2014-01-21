@@ -1,0 +1,34 @@
+/* CSS file */
+@namespace s "library://ns.adobe.com/flex/spark";
+@namespace mx "library://ns.adobe.com/flex/mx";
+
+
+global
+{
+	/*
+	color:#81A594;
+	color:#27408B;
+	color:#4B0082;
+     */
+	color:#00009C;
+	fontFamily:'arial monospace',helvetica,sans-serif;
+	fontSize:13;
+}
+
+
+
+
+/*s|DataGrid{
+selectionColor:#FFFF00;
+fontFamily:'courier new',verdana,arial,helvetica,sans-serif;
+fontSize:13;
+}*/
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 creationComplete="init()"
+		 >
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<!--<s:RadioButtonGroup id="ampm"/>-->
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			
+			//public var selectedDate:String;
+			[Bindable]
+			private var filldate:Date
+			private var fillhours:Number
+			private var fillminutes:Number
+			
+			public function init():void
+			{
+				filldate= new Date();
+				
+				
+				fillhours=filldate.getHours();
+				
+				
+				/*if(fillhours >=12)
+				{
+					ampm.selectedValue=2;
+				}
+				else
+					
+					ampm.selectedValue=1;
+				
+				if(fillhours<13)
+				{
+					hours.value= fillhours;
+				}
+				
+				if(fillhours >=13)
+				{
+					hours.value=(fillhours-12);
+				}
+				
+				if(fillhours ==0)
+				{
+					hours.value=12;
+				}*/
+				
+				hours.value=fillhours;
+				
+				fillminutes=filldate.getMinutes();
+				
+				minutes.value=fillminutes;
+			}
+			
+		]]>
+	</fx:Script>
+	
+	<s:HGroup>
+		<mx:DateField id="date" selectedDate="{new Date()}"/> 
+		<s:NumericStepper id="hours" minimum="0" maximum="24" />
+		<s:Label text=":" fontWeight="bold" fontSize="16" alignmentBaseline="descent"/>
+		<s:NumericStepper id="minutes" minimum="0" maximum="59"/>
+		<!--<s:RadioButton groupName="ampm" 
+					   label="AM"
+					   value="1"
+					   selected="true"/>		
+		<s:RadioButton groupName="ampm"
+					   label="PM"
+					   value="2"/>-->
+	</s:HGroup>
+</s:Group>

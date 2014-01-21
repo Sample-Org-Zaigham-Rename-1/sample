@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SecondaryFlight.mxml -->
+<s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					xmlns:s="library://ns.adobe.com/flex/spark" 
+					xmlns:mx="library://ns.adobe.com/flex/mx"
+					label="Flight"
+					height="100%" width="100%"
+					icon="{IconUtil.flt}">
+	<fx:Script>
+		<![CDATA[
+			import com.aa.rpt.apps.owr.utils.IconUtil;
+		]]>
+	</fx:Script>
+	
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<s:RadioButtonGroup id="flt_al_RCB"/>
+	</fx:Declarations>
+	
+	<s:layout>
+		<s:VerticalLayout  paddingLeft="25" paddingTop="2" horizontalAlign="left" gap="3"/>
+	</s:layout>
+	<s:Label text="Flight Information:" fontSize="15"  fontWeight="bold"/>
+	<s:Spacer height="10"/>
+	
+		<s:HGroup verticalAlign="middle">
+			
+			<s:Label text="Flight Number:"
+						textAlign="right"/>
+			<s:TextInput id="flt_num" restrict="0-9" maxChars="4" widthInChars="4" text=""/>
+		</s:HGroup>
+	
+		<s:HGroup verticalAlign="middle">
+			
+			<s:Label text="Depart From:"
+						textAlign="right"/>
+			<s:TextInput id="dpt_frm" maxChars="3" widthInChars="3" change="{dpt_frm.text = dpt_frm.text.toUpperCase()}"/>
+		</s:HGroup>
+		<s:HGroup verticalAlign="middle">
+			<s:Label text="Arrive At:"
+				textAlign="right"/>
+			<s:TextInput id="dpt_arr" maxChars="3" widthInChars="3" change="{dpt_arr.text = dpt_arr.text.toUpperCase()}"/>
+		</s:HGroup>
+	
+		<s:HGroup verticalAlign="middle">
+			<s:Label text="Flight Date:"
+				textAlign="right"/>
+				<mx:DateField id="flightDate"/>
+		</s:HGroup>
+
+		
+		<s:HGroup verticalAlign="middle">
+			<s:Label text="Airlines:"
+				textAlign="right"/>
+				<s:VGroup>	
+					<s:RadioButton id="AACB" groupName="flt_al_RCB" label="AA" selected="true"/>
+					<s:RadioButton groupName="flt_al_RCB" id="BACB" label="BA"/>
+					<s:RadioButton groupName="flt_al_RCB" id="IBCB" label="IB"/>
+					<s:RadioButton groupName="flt_al_RCB" id="JLCB" label="JL"/>
+					<s:RadioButton groupName="flt_al_RCB" id="AYCB" label="AY"/>
+					<s:RadioButton groupName="flt_al_RCB" id="USCB" label="US"/>
+				</s:VGroup>
+		</s:HGroup>
+
+</s:NavigatorContent>

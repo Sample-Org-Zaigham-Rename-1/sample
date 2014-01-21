@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SearchScreen.mxml -->
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   title="Flight Options:"
+			   height="70%"
+			   width="100%"
+			   maxHeight="{FlexGlobals.topLevelApplication.height}" 
+			   skinClass="skin.TitleWindowSkin"
+			   styleName="TitleWindow" xmlns:view="com.aa.rpt.apps.owr.view.*"
+			   >
+	
+	<fx:Style>
+		.TitleWindow 
+		{
+		borderColor: #000000;
+		backgroundColor: #FFFFFF;
+		color: #00009C;
+		paddingBottom: 5;
+		paddingLeft: 0;
+		paddingRight: 0;
+		paddingTop: 5;
+		
+		}
+	</fx:Style>
+	
+	
+	<fx:Metadata>
+		[Event(name="getConnectionsEvent", type="com.aa.rpt.apps.owr.events.GetConnectionsDataEvent")]
+	</fx:Metadata>
+	
+
+	<s:layout>
+		<s:VerticalLayout/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.aa.rpt.apps.owr.events.GetConnectionsDataEvent;
+			import com.aa.rpt.apps.owr.vo.SearchScreenVO;
+			
+			import mx.core.FlexGlobals;
+			import mx.events.ValidationResultEvent;
+			import mx.utils.StringUtil;
+			import mx.validators.Validator;
+
+			
+					private function clickHandler(event:Event):void
+					{
+						var index:Number;
+						var searchScreenInputParmsVO:SearchScreenVO;
+						searchScreenInputParmsVO=new SearchScreenVO();
+						searchScreenInputParmsVO.screen_num=1;
+						
+						/* var inputParmsVO = new GetConnectionsByMarketInputParmVO();*/
+						
+						if(tab_nav.selectedIndex==0)
+						{	
+
+							var startdt:Date=createDate(market.dep_strt_time.date.selectedDate,market.dep_strt_time.hours.value,market.dep_strt_time.minutes.value);
+							var enddt:Date;
+							var tempdate:Date;
+							if(market.dep_end_time.enabled)
+							{
+							 enddt= createDate(market.dep_end_time.date.selectedDate,market.dep_end_time.hours.value,market.dep_end_time.minutes.value);
+							}
+							
+							if(market.nextday.selected)
+							{
+								tempdate=market.dep_strt_time.date.selectedDate;
+								tempdate=new Date(market.dep_strt_time.date.selectedDate.fullYear,market.dep_strt_time.date.selectedDate.month,market.dep_strt_time.date.selectedDate.date+1,0,0)
+								//enddt=createDate(tempdate,market.dep_strt_time.hours.value,market.dep_strt_time.minutes.value);
+								enddt=createDate(tempdate,23,59);
+							}
+							
+							if(market.twodays.selected)
+							{
+								tempdate=market.dep_strt_time.date.selectedDate;
+								tempdate=new Date(market.dep_strt_time.date.selectedDate.fullYear,market.dep_strt_time.date.selectedDate.month,market.dep_strt_time.date.selectedDate.date+2,0,0)
+								//enddt=createDate(tempdate,market.dep_strt_time.hours.value,market.dep_strt_time.minutes.value);	
+								enddt=createDate(tempdate,23,59);	
+							}
+								
+							if(enddt <= startdt)
+								
+							{ 
+								Message.text="MAX LEAVE TIME Must Be Greater then MIN LEAVE TIME";
+								return;
+							}
+							
+							searchScreenInputParmsVO.strt_date= startdt;
+							searchScreenInputParmsVO.end_date=enddt;
+							
+							var marketCarrierClause:String = "";
+							if(market.AACB.selected)
+								marketCarrierClause += market.AACB.label + ',';
+							if(market.BACB.selected)
+								marketCarrierClause += market.BACB.label + ',';
+							if(market.IBCB.selected)
+								marketCarrierClause += market.IBCB.label + ',';
+							if(market.JLCB.selected)
+								marketCarrierClause += market.JLCB.label + ',';
+							if(market.AYCB.selected)
+								marketCarrierClause += market.AYCB.label + ',';  
+							if(market.USCB.selected)
+								marketCarrierClause += market.USCB.label + ','; 
+							
+							marketCarrierClause = marketCarrierClause.substr(0, marketCarrierClause.length-1);
+							
+							index= tab_nav.selectedIndex +1;
+							
+							searchScreenInputParmsVO.index=index;
+							
+							searchScreenInputParmsVO.carrierCodes= marketCarrierClause;
+							
+							if(market.arr_sta.text==''||StringUtil.trim(market.arr_sta.text)==''
+								||market.dep_sta.text==''||StringUtil.trim(market.dep_sta.text)=='')
+							{
+								Message.text="PLEASE ENTER A VALID MARKET";
+								return;
+							}
+							searchScreenInputParmsVO.arr_sta= market.arr_sta.text;
+							searchScreenInputParmsVO.dep_sta= market.dep_sta.text;
+							
+							
+							/*searchScreenInputParmsVO.strt_hours=market.dep_strt_time.hours.value;
+							searchScreenInputParmsVO.strt_min=market.dep_strt_time.minutes.value;
+						
+							searchScreenInputParmsVO.end_hours=market.dep_end_time.hours.value;
+							searchScreenInputParmsVO.end_min=market.dep_end_time.minutes.value;*/
+							
+							if(market.intconnect.text=="INT"||StringUtil.trim(market.intconnect.text)=='')
+								market.intconnect.text = market.domconnect.text;
+								
+							
+							searchScreenInputParmsVO.domconnect= market.domconnect.text;
+							searchScreenInputParmsVO.intconnect=market.intconnect.text;
+							searchScreenInputParmsVO.sistercities=market.sistercitiescb.selected;
+							
+							if(market.miles_in_num.selected)
+							{
+								if(market.miles.text==""||StringUtil.trim(market.miles.text)=='')
+								{
+									Message.text="PLEASE ENTER A VALUE FOR MILES";
+									return;
+								}
+								else
+								{
+									searchScreenInputParmsVO.miles = market.miles.text;
+									searchScreenInputParmsVO.mileagePercent = false;
+								}
+								
+							}
+								
+							else if(market.milesPercent.text == null || StringUtil.trim(market.milesPercent.text) == '')
+							{
+								searchScreenInputParmsVO.miles = "1.33";
+								searchScreenInputParmsVO.mileagePercent = true;
+							}
+							else 
+							{
+								searchScreenInputParmsVO.miles = market.milesPercent.text;
+								searchScreenInputParmsVO.mileagePercent = true;
+							}
+							
+							searchScreenInputParmsVO.connections=market.leginfo.value;
+							searchScreenInputParmsVO.avoid_sta=market.avoid_sta.text;
+							searchScreenInputParmsVO.suppress_avail=market.sup_av.selected;
+						}
+						
+						else
+						{	
+							index= tab_nav.selectedIndex +1;
+							searchScreenInputParmsVO.index=index;
+							searchScreenInputParmsVO.flight_num=flight.flt_num.text;
+							searchScreenInputParmsVO.flt_dep_sta=flight.dpt_frm.text;
+							searchScreenInputParmsVO.flt_arr_sta=flight.dpt_arr.text;
+							searchScreenInputParmsVO.flt_date=flight.flightDate.selectedDate;
+							searchScreenInputParmsVO.flt_airline=flight.flt_al_RCB.selectedValue as String;
+						}
+						
+					dispatchEvent(new GetConnectionsDataEvent('getConnectionsEvent', searchScreenInputParmsVO));
+					}
+			
+			public function createDate(date:Date,hours:Number,minutes:Number):Date
+			{   
+				/*var militaryHours:int= hours;
+				if(time_of_day == 2 && hours!=12)
+				militaryHours= hours+12;
+				else if (time_of_day == 1 && hours == 12)
+				militaryHours =0;*/
+				return (new Date(date.getFullYear(),
+					date.getMonth(),
+					date.getDate(),
+					hours,minutes));
+				
+				/*return((date.toDateString())+militaryHours+minutes);*/
+			}
+			
+			
+		]]>
+	</fx:Script>
+	
+	
+	<mx:TabNavigator id="tab_nav" horizontalCenter="0" verticalCenter="80" includeInLayout="true" >
+		
+		<view:Market id="market" label="Market"/>
+		<view:Flight id="flight" label="Flight"/>
+		
+	</mx:TabNavigator>
+	
+	<s:HGroup horizontalAlign="right" includeInLayout="true">
+		<s:Label id="Message" width="100%" color="red"/>
+		<s:Spacer width="100"/>
+		<s:Button label="Search" click="{Message.text='';clickHandler(event)}"/>
+	</s:HGroup>
+	
+	
+	
+	
+	
+</s:TitleWindow>

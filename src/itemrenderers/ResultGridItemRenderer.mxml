@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ResultGridItemRenderer.mxml -->
+<s:GridItemRenderer xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					xmlns:s="library://ns.adobe.com/flex/spark" 
+					xmlns:mx="library://ns.adobe.com/flex/mx" clipAndEnableScrolling="true"
+					width="100%">
+	
+	<fx:Script>
+		<![CDATA[
+			import com.aa.rpt.apps.owr.utils.DateUtil;
+			import com.aa.rpt.apps.owr.vo.BasicFlightDataVO;
+			import com.aa.rpt.apps.owr.vo.FlightLegVO;
+			import com.aa.rpt.apps.owr.vo.RouteVO;
+			
+			import mx.utils.StringUtil;
+			
+			
+			[Embed(source="images/pending.jpg")] static private var pending:Class;
+			[Embed(source="images/available.png")] static private var available:Class;
+			[Embed(source="images/unavailable.jpg")] static private var unavailable:Class;
+			[Embed(source="images/aa.png")] static private var aaLogo:Class;
+			[Embed(source="images/ae.png")] static private var aeLogo:Class;
+			[Embed(source="images/ba.png")] static private var baLogo:Class;
+			[Embed(source="images/ib.png")] static private var ibLogo:Class;
+			[Embed(source="images/jl.png")] static private var jlLogo:Class;
+			[Embed(source="images/ay.png")] static public var ayLogo:Class;
+			[Embed(source="images/us.png")] static public var usLogo:Class;
+			[Bindable]
+			[Embed(source="images/rarrow.png")] static private var rArrow:Class;
+			[Bindable] public var count:String;
+			[Bindable] private var tip:String = "Pending Availability";
+			
+			[Bindable] private var statusImg:Class = pending;
+			
+			[Bindable] private var theLogo:Class;
+			
+			
+			private function timeFormat(val:int):String
+			{
+				var hrs:String = String(int(val / 60));
+				var min:String = String(int(val % 60));
+				
+				return(zeroPad(hrs, 2) + ":" + zeroPad(min, 2));
+			}
+			
+			private function setAirlineImage(val:String):Class
+			{
+				var airlinecode:String= val;
+				if(airlinecode=='AA')
+					theLogo = aaLogo;
+				else if(airlinecode == 'BA')
+					theLogo = baLogo;
+				else if(airlinecode == 'IB')
+					theLogo = ibLogo;
+				else if(airlinecode == 'JL')
+					theLogo = jlLogo;
+				else if(airlinecode == 'AY')
+					theLogo = ayLogo;
+				else if(airlinecode == 'US')
+					theLogo= usLogo;
+				else theLogo = null;
+				
+				return theLogo;
+			}
+			
+			private function zeroPad(val:String, maxWidth:int):String
+			{
+				while(val.length < maxWidth)
+					val = "0" + val;
+				
+				return(val);
+			}
+			
+			
+			override public function prepare(hasBeenRecycled:Boolean):void
+			{
+				if(!data)
+				{
+					return;
+				}
+				
+				if((rowIndex+1)%2 ==0)
+					sc.color= 0xFFFFF0;
+				else
+					sc.color= 0xADADAD;
+			}
+			
+			
+			override public function set data(value:Object):void
+				{	
+	
+					super.data=value;
+					if(!data)
+					{
+						return;
+					}
+					
+					var fltVO1:FlightLegVO = null;
+					var fltVO2:FlightLegVO = null;
+					var fltVO3:FlightLegVO = null;
+					
+					var route:RouteVO= data as RouteVO
+						
+					cabinData.visible=false;
+					leg1airline.source='';
+					airlineFltnumFlt1.text ='';
+					depArvFlt1.text='';
+					depTimeFlt1.text='';
+					arvTimeFlt1.text='';
+					leg3airline.source='';
+					conx2Image.visible=false;
+					cabinData2.visible=false;
+					leg2airline.source='';
+					leg2airline.visible=false;
+					conx1Image.visible=false;
+					cabinData1.visible=false;
+					airlineFltnumFlt2.text ='';
+					depArvFlt2.text='';
+					depTimeFlt2.text='';
+					arvTimeFlt2.text='';
+					conxTime1.text='';
+					leg3airline.visible=false;
+					airlineFltnumFlt3.text ='' ;
+					depArvFlt3.text='';
+					depTimeFlt3.text='';
+					arvTimeFlt3.text='';
+					conxTime2.text='';
+					tip='';
+					statusImg=pending;
+					count='';
+					
+					if(route.fltLegs != null && route.fltLegs.length >= 1)
+					{
+						var flights:Array = route.fltLegs as Array;
+						var flightString:String = ''; 
+						
+						for(var i:int=0;i<flights.length;i++)
+						{
+							if( i == 0)
+							{
+								fltVO1 = flights[i] as FlightLegVO;
+								
+								cabinData.visible=true;
+								leg1airline.source = setAirlineImage(fltVO1.airline);;
+								airlineFltnumFlt1.text = fltVO1.airline+fltVO1.flightNumber;
+								depArvFlt1.text=fltVO1.departureStation+"-"+fltVO1.arrivalStation;
+								depTimeFlt1.text=fltVO1.departureTime.substr(0,2) + "/" + fltVO1.departureTime.substr(9,4);
+								arvTimeFlt1.text=fltVO1.arrivalTime.substr(0,2) + "/" + fltVO1.arrivalTime.substr(9,4);
+								
+								if(fltVO1.cabinData)
+								{
+									cabinData.setStyle("color", 0x000000);
+									cabinData.text=fltVO1.cabinData;
+								}
+								
+								else
+								{
+									cabinData.setStyle("color", 0xFF0000);
+									cabinData.text="--- --- ---";
+								}
+
+							}
+
+							if( i == 1)
+							{
+								fltVO2 = flights[i] as FlightLegVO;
+								
+								leg2airline.source = setAirlineImage(fltVO2.airline);
+								leg2airline.visible=true;
+								conx1Image.visible=true;
+								cabinData1.visible=true;
+								airlineFltnumFlt2.text = fltVO2.airline+fltVO2.flightNumber;
+								depArvFlt2.text=fltVO2.departureStation+"-"+fltVO2.arrivalStation;
+								depTimeFlt2.text=fltVO2.departureTime.substr(0,2) + "/" + fltVO2.departureTime.substr(9,4);
+								arvTimeFlt2.text=fltVO2.arrivalTime.substr(0,2) + "/" + fltVO2.arrivalTime.substr(9,4);
+								
+								var leg1ArvTime:Date= new Date(Number(fltVO1.arrivalTime.substr(5,4)),
+									DateUtil.getMonth(fltVO1.arrivalTime.substr(2,3)), 
+									Number(fltVO1.arrivalTime.substr(0,2)), 
+									Number(fltVO1.arrivalTime.substr(9,2)), 
+									Number(fltVO1.arrivalTime.substr(11,2)));
+								
+								var leg2DepTime:Date= new Date(Number(fltVO2.departureTime.substr(5,4)),
+									DateUtil.getMonth(fltVO2.departureTime.substr(2,3)), 
+									Number(fltVO2.departureTime.substr(0,2)), 
+									Number(fltVO2.departureTime.substr(9,2)), 
+									Number(fltVO2.departureTime.substr(11,2)));
+								
+								conxTime1.text= timeFormat(((leg2DepTime.time-leg1ArvTime.time)/60000));
+								
+								if(fltVO2.cabinData)
+								{
+									cabinData1.setStyle("color", 0x000000);
+									cabinData1.text=fltVO2.cabinData;
+								}
+								
+								else
+								{
+									cabinData1.setStyle("color", 0xFF0000);
+									cabinData1.text="--- --- ---";
+								}
+
+							}
+
+							if( i == 2)
+							{
+								fltVO3 = flights[i] as FlightLegVO;
+								
+								leg3airline.source = setAirlineImage(fltVO3.airline);
+								leg3airline.visible=true;
+								conx2Image.visible=true;
+								cabinData2.visible=true;
+								airlineFltnumFlt3.text = fltVO3.airline+fltVO3.flightNumber;
+								depArvFlt3.text=fltVO3.departureStation+"-"+fltVO3.arrivalStation;
+								depTimeFlt3.text=fltVO3.departureTime.substr(0,2) + "/" + fltVO3.departureTime.substr(9,4);
+								arvTimeFlt3.text=fltVO3.arrivalTime.substr(0,2) + "/" + fltVO3.arrivalTime.substr(9,4);
+								
+								var leg2ArvTime:Date= new Date(Number(fltVO2.arrivalTime.substr(5,4)),
+									DateUtil.getMonth(fltVO2.arrivalTime.substr(2,3)), 
+									Number(fltVO2.arrivalTime.substr(0,2)), 
+									Number(fltVO2.arrivalTime.substr(9,2)), 
+									Number(fltVO2.arrivalTime.substr(11,2)));
+								
+								var leg3DepTime:Date =new Date(Number(fltVO3.departureTime.substr(5,4)),
+									DateUtil.getMonth(fltVO3.departureTime.substr(2,3)), 
+									Number(fltVO3.departureTime.substr(0,2)), 
+									Number(fltVO3.departureTime.substr(9,2)), 
+									Number(fltVO3.departureTime.substr(11,2)));
+								
+								conxTime2.text= timeFormat(((leg3DepTime.time-leg2ArvTime.time)/60000));
+								
+								if(fltVO3.cabinData)
+								{
+									cabinData2.setStyle("color", 0x000000);
+									cabinData2.text=fltVO3.cabinData;
+								}
+								
+								else
+								{
+									cabinData2.setStyle("color", 0xFF0000);
+									cabinData2.text="--- --- ---";
+								}
+	
+							}
+							
+							if(route.totalSeats!='' && StringUtil.trim(route.totalSeats)!=''&& route.totalSeats!=null )
+							{
+								count='';
+								count=route.totalSeats;
+								
+								if(Number(count)>0)
+								{
+									statusImg=available;
+									tip= count+" Seats Available";
+								}
+								else
+								{
+									statusImg=pending;
+									tip="Pending Availability";
+								} 
+								
+								if(Number(count)==0)
+								{
+									statusImg=unavailable;
+									tip="??? Seats Available";
+								}
+
+							} 
+							else
+							{
+								count='';
+								statusImg=pending;
+								tip="Pending Availability";
+							} 
+		
+						}
+						
+					}
+				}
+				
+					
+			
+		]]>
+	</fx:Script>
+
+	
+	<s:Rect top="0" bottom="0" right="0" left="0">
+		<s:fill>
+			<s:SolidColor id="sc" />
+		</s:fill>
+	</s:Rect>
+	
+	<s:HGroup height="100%" paddingTop="5" paddingLeft="1" paddingBottom="5" paddingRight="1">
+		<s:Image source="{statusImg}" toolTip="{tip}"/>
+		<s:Label textAlign="right" text="{count}" color="#0000FF" width="25" fontWeight="bold"/>
+		
+		<s:Image id="leg1airline"/>
+		
+		
+		<s:VGroup gap="5">
+			<s:HGroup>
+				<s:Spacer width="1"/>
+				<s:Label id="airlineFltnumFlt1" width="60"  toolTip="Flt Number"  fontWeight="bold" verticalAlign="middle"/>
+				<s:Label id="depArvFlt1" width="70"  fontWeight="bold" verticalAlign="middle"/>
+			</s:HGroup>
+			<s:HGroup>
+				<s:Spacer width="1"/>
+				<s:Label id="depTimeFlt1"  toolTip="Latest Dep Time" width="60" verticalAlign="middle"/>
+				<s:Label id="arvTimeFlt1"  toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
+			</s:HGroup>
+		</s:VGroup>
+		<s:VGroup>
+			<s:Spacer height="9"/>	
+			<s:Label id="cabinData"
+					 fontWeight="bold"
+					 fontSize="13"
+					 width="140"
+					 toolTip="Availability"
+					 color="#FF0000"
+					 text="--- --- ---"
+					 verticalAlign="middle"
+					 visible="false"/>
+		</s:VGroup>
+		
+		<s:VGroup>
+			<s:Label id="conxTime1"  color="0x000000"/>
+			<s:Image id="conx1Image" source="{rArrow}" toolTip="{tip}" visible="false" includeInLayout="true"/>
+		</s:VGroup>
+		
+		<s:Image id="leg2airline" visible="false"/>
+		
+		<s:VGroup gap="5">
+			<s:HGroup>
+				<s:Spacer width="1"/>
+				<s:Label id="airlineFltnumFlt2" width="60" text="" toolTip="Flt Number"  fontWeight="bold" verticalAlign="middle"/>
+				<s:Label id="depArvFlt2" width="70" text="" toolTip="" fontWeight="bold" verticalAlign="middle"/>
+			</s:HGroup>
+			<s:HGroup>
+				<s:Spacer width="1"/>
+				<s:Label id="depTimeFlt2" toolTip="Latest Dep Time" width="60" verticalAlign="middle"/>
+				<s:Label id="arvTimeFlt2" toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
+			</s:HGroup>
+		</s:VGroup>
+		<s:VGroup>
+			<s:Spacer height="9"/>	
+			<s:Label id="cabinData1"
+					 fontWeight="bold"
+					 fontSize="13"
+					 width="140"
+					 toolTip="Availability"
+					 color="#FF0000"
+					 text="--- --- ---"
+					 verticalAlign="middle"
+					 visible="false"
+					 includeInLayout="true"/>
+		</s:VGroup>
+		
+		<s:VGroup>
+			
+			<s:Label id="conxTime2" color="0x000000"/>
+			<s:Image id="conx2Image" source="{rArrow}" toolTip="{tip}" visible="false" includeInLayout="true"/>
+		</s:VGroup>
+		
+		<s:Image id="leg3airline" visible="false"/>
+		
+		<s:VGroup gap="5">
+			<s:HGroup>
+				<s:Spacer width="1"/>
+				<s:Label id="airlineFltnumFlt3" width="60" text="" toolTip="Flt Number"  fontWeight="bold" verticalAlign="middle"/>
+				<s:Label id="depArvFlt3" width="70" text="" toolTip="" fontWeight="bold" verticalAlign="middle"/>
+			</s:HGroup>
+			<s:HGroup>
+				<s:Spacer width="1"/>
+				<s:Label id="depTimeFlt3" toolTip="Latest Dep Time" width="60" verticalAlign="middle"/>
+				<s:Label id="arvTimeFlt3" toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
+			</s:HGroup>
+		</s:VGroup>
+		<s:VGroup>
+			<s:Spacer height="9"/>	
+			<s:Label id="cabinData2"
+					 fontWeight="bold"
+					 fontSize="13"
+					 width="140"
+					 toolTip="Availability"
+					 color="#FF0000"
+					 text="--- --- ---"
+					 verticalAlign="middle"
+					 visible="false"
+					 includeInLayout="true"/>
+		</s:VGroup>
+		
+		<s:Spacer width="100%"/>
+
+	</s:HGroup>
+	
+</s:GridItemRenderer>

@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SecondaryMarketSearchBox.mxml -->
+<s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				   xmlns:s="library://ns.adobe.com/flex/spark" 
+				   xmlns:mx="library://ns.adobe.com/flex/mx"
+				   backgroundColor="#FFFFFF" xmlns:view="com.aa.rpt.apps.owr.view.*"
+				   label="Market"
+				   icon="{IconUtil.market}">
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		<s:RadioButtonGroup id="secSearchMileage" itemClick="secSearchMileage_itemClickHandler(event)"/>
+	</fx:Declarations>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.aa.rpt.apps.owr.utils.IconUtil;
+			
+			import mx.events.ItemClickEvent;
+			
+			
+			
+			[Embed(source="images/swap.png")]
+			[Bindable]static private var swap:Class;
+			
+			protected function swapIT_clickHandler(event:MouseEvent):void
+			{
+				// TODO Auto-generated method stub
+				var from:String='';
+				var to:String='';
+				
+				from=secSearchTifrom.text;
+				to=secSearchTiTo.text;
+				
+				secSearchTifrom.text=to;
+				secSearchTiTo.text=from;
+				
+				
+			}
+			protected function secSearchALL_changeHandler(event:Event):void
+			{
+				if(secSearchALL.selected)
+				{
+					secSearchAA.selected=false;
+					secSearchBA.selected=false;
+					secSearchIB.selected=false;
+					secSearchJL.selected=false;
+					secSearchAY.selected=false;  
+				 	secSearchUS.selected=false; 
+					
+					secSearchAA.enabled=false;
+					secSearchBA.enabled=false;
+					secSearchIB.enabled=false;
+					secSearchJL.enabled=false;
+					secSearchAY.enabled=false;  
+					secSearchUS.enabled=false; 
+				}
+				else
+				{
+					secSearchAA.enabled=true;
+					secSearchBA.enabled=true;
+					secSearchIB.enabled=true;
+					secSearchJL.enabled=true;
+					secSearchAY.enabled=true;  
+					secSearchUS.enabled=true; 
+				}
+				
+			}
+			
+			
+			protected function secSearchMileage_itemClickHandler(event:ItemClickEvent):void
+			{
+				// TODO Auto-generated method stub
+				if( event.index == 1 )
+				{
+					miles.visible = true;
+					miles.includeInLayout = true;
+					
+					milesPercent.visible = false;
+					milesPercent.includeInLayout = false;
+				}
+				else
+				{
+					miles.visible = false;
+					miles.includeInLayout = false;
+					
+					milesPercent.visible = true;
+					milesPercent.includeInLayout = true;
+				}
+			}
+			
+			protected function nextday_changeHandler(event:Event):void
+			{
+				// TODO Auto-generated method stub
+				if(nextday.selected)
+				{
+					secSearchEndtime.enabled=false;
+					twodays.enabled=false;
+				}
+				
+				else
+				{
+					secSearchEndtime.enabled=true;
+					twodays.enabled=true;
+				}
+				
+				
+			}
+			
+			protected function twodays_changeHandler(event:Event):void
+			{
+				// TODO Auto-generated method stub
+				
+				if(twodays.selected)
+				{
+				secSearchEndtime.enabled=false;
+				nextday.enabled=false;
+				}
+				else
+				{
+					secSearchEndtime.enabled=true;
+					nextday.enabled=true;
+				}
+			}
+			
+			
+			
+		]]>
+	</fx:Script>
+
+	<s:VGroup>
+
+			<s:Group  top="10" bottom="5" left="25" right="25">
+				<s:layout>
+					<s:VerticalLayout verticalAlign="middle" horizontalAlign="left" paddingLeft="25" paddingTop="10" paddingBottom="10" paddingRight="2"/>
+				</s:layout>
+				<s:Label text="Departure:" fontSize="16" fontWeight="bold"/>
+				
+				<s:VGroup>
+					<s:Label text="Departure Start time:"/>
+					<view:DateTime id="secSearchStarttime"/>
+					<s:Label text="Departure End time:"/>
+					<view:DateTime id="secSearchEndtime"/>
+					<s:HGroup>
+					<s:CheckBox id="nextday" label="NextDay" selected="false" change="nextday_changeHandler(event)"/>
+					<s:CheckBox id="twodays" label="TwoDays" selected="false" change="twodays_changeHandler(event)"/>
+					</s:HGroup>
+				</s:VGroup>
+				<s:Spacer height="4"/>
+				<s:Label text="Market:" fontSize="16" fontWeight="bold"/>
+				
+				<s:HGroup gap="25">
+					<s:VGroup>
+						<s:Label text="Depart:"/>
+						<s:TextInput id="secSearchTifrom"
+									 restrict="a-zA-Z"
+									 maxChars="3"
+									 widthInChars="3"
+									 text="DFW"
+									 change="{secSearchTifrom.text=secSearchTifrom.text.toUpperCase()}"/>
+					</s:VGroup>
+					<s:VGroup>
+						<s:Spacer height="15" width="100%"/>
+						<s:Image id="swapIT" source="{swap}" click="swapIT_clickHandler(event)"/>
+					</s:VGroup>
+					
+					<s:VGroup>	
+						<s:Label text="Arrive:"/>
+						<s:HGroup>
+							<s:TextInput id="secSearchTiTo"
+										 restrict="a-zA-Z"
+										 maxChars="3"
+										 widthInChars="3"
+										 text="LHR"
+										 change="{secSearchTiTo.text=secSearchTiTo.text.toUpperCase()}"/>
+							
+							
+						</s:HGroup>
+					</s:VGroup>
+					
+					
+				</s:HGroup>	
+				
+				<s:Spacer height="4"/>
+				<s:Label text="Airlines:" fontSize="16" fontWeight="bold"/>
+				
+				<s:HGroup>
+					<s:CheckBox id="secSearchAA" label="AA"/>
+					<s:CheckBox id="secSearchBA" label="BA"/>
+					<s:CheckBox id="secSearchIB" label="IB"/>
+					<s:CheckBox id="secSearchJL" label="JL"/>
+					<s:CheckBox id="secSearchAY" label="AY"/>
+					<s:CheckBox id="secSearchUS" label="US"/>
+					<s:CheckBox id="secSearchALL" label="ALL" change="secSearchALL_changeHandler(event)"/>
+				</s:HGroup>
+				<s:Spacer height="4"/>
+				<s:HGroup verticalAlign="middle">
+					<s:Label text="Max Connect Time:" fontSize="16" fontWeight="bold"/>
+					<s:Label text="DOM:"/>
+					<s:TextInput id="secSearchdomconnect" widthInChars="3" text="4" restrict="0-9"/>
+					<s:VGroup>
+						<s:Spacer height="3"/>
+						<s:Label text="INTL:"/>
+						<s:Label text="(optional)" fontSize="11"/>
+					</s:VGroup>
+					<s:TextInput id="secSearchintconnect" widthInChars="3"  restrict="0-9" />
+				</s:HGroup>
+				
+				<s:Spacer height="4"/>
+				<s:HGroup verticalAlign="middle" includeInLayout="true">
+				
+					<s:RadioButton id="miles_in_percent"
+								   groupName="secSearchMileage" 
+								   label="Circuity:"
+								   />
+					<s:TextInput id="milesPercent" 
+								 restrict="0-9." 
+								 maxChars="4"
+								 text="1.33"
+								 visible="true"
+								 widthInChars="4"
+								 toolTip="Enter the multiplication factor. For e.g. a multiplication factor of 2 would result in twice the mileage between origin-destination"/>
+					<s:RadioButton id="miles_in_num"
+								   groupName="secSearchMileage"
+								   label="Miles:"
+								  	/>
+					<s:TextInput id="miles" 
+								 restrict="0-9" 
+								 maxChars="6"
+								 visible="false"
+								 toolTip="Enter the mileage you are willing to travel for your origin-destination."/>
+
+				</s:HGroup>
+				
+				<s:Spacer height="4"/>
+				<s:HGroup verticalAlign="middle">
+					<s:Label text="Sister cities:" fontSize="16" fontWeight="bold"/>
+					<s:CheckBox id="secSearchsistercityCB"/>	
+				</s:HGroup>
+				<s:Spacer height="6"/>
+				<s:Label text="Connections:" fontSize="16" fontWeight="bold"/>
+				<s:HGroup verticalAlign="middle">
+					<s:Label text="Number of Legs:"/>
+					<mx:HSlider id="secSearchleginfo" minimum="1" maximum="3" labels="['Direct','2Legs','3Legs']"
+								tickInterval="1"
+								snapInterval="1"/>
+				</s:HGroup>
+				<s:Spacer height="4"/>
+				<s:HGroup verticalAlign="middle">
+					<s:Label text="Avoid Stations:"/>
+					<s:TextInput id="secSearchavoidsta"
+								 restrict="a-z, A-Z"
+								 change="{secSearchavoidsta.text=secSearchavoidsta.text.toUpperCase()}"/>	
+				</s:HGroup>
+				
+				<s:Spacer height="4"/>
+				<s:HGroup verticalAlign="middle">
+					<s:Label text="Suppress Availability:"/>
+					<s:CheckBox id="secSearchsupavl"/>	
+				</s:HGroup>
+				
+			</s:Group>
+	</s:VGroup>
+			
+</s:NavigatorContent>
