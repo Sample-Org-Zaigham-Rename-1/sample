@@ -49,6 +49,7 @@
 	<fx:Script>
 		<![CDATA[
 			import com.aa.rpt.apps.owr.events.GetConnectionsDataEvent;
+			import com.aa.rpt.apps.owr.view.NoAccessScreen;
 			import com.aa.rpt.apps.owr.view.SearchScreen;
 			import com.aa.rpt.apps.owr.vo.AlfaDataVO;
 			import com.aa.rpt.apps.owr.vo.AvailabilityVO;
@@ -134,30 +135,25 @@
 				}
 				return userProfileServlet;
 			}
-			private var userDomain:String='';
+
 			protected function httpUserService_resultHandler(event:ResultEvent):void
 			{
-				var userXML:XML = null;
-				if(event.result == null || event.result.toString().length < 40){
-					userXML = 
-						<user>
-							<userId>557479</userId>
-							<lastName>WU</lastName>
-							<firstName>CHRISTOPHER</firstName>
-							<userRole>AAUser</userRole>
-						</user>
-						;
-				}else{
-					userXML = event.result as XML;
-				}
+				var xml:XML = null;
 				
-				tiUser.text=userXML..firstName+ " " +userXML..lastName;
-				userDomain=userXML..userRole;
+				if(event != null && event.result != null)
+					xml = event.result as XML;
+				
+				if(xml == null || xml..userRole == "NOACCESS")
+					PopUpManager.centerPopUp(PopUpManager.createPopUp(this, NoAccessScreen, true));
+				
+				if(xml != null)
+					tiUser.text = xml..firstName + " " + xml..lastName;
 			}
 			
 			
 			protected function httpUserService_faultHandler(event:FaultEvent):void
 			{
+				httpUserService_resultHandler(null);
 				Alert.show(event.fault.toString());
 			}
 			
