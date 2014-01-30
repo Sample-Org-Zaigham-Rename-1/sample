@@ -144,7 +144,12 @@
 					xml = event.result as XML;
 				
 				if(xml == null || xml..userRole == "NOACCESS")
+					{
 					PopUpManager.centerPopUp(PopUpManager.createPopUp(this, NoAccessScreen, true));
+					
+					if(xml != null)
+						Alert.show("UnAuthorized User/Role: " + xml..userId);
+					}
 				
 				if(xml != null)
 					tiUser.text = xml..firstName + " " + xml..lastName;
