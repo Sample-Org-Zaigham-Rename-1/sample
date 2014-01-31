@@ -4,7 +4,7 @@
 			   xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
 			   xmlns:view="com.aa.rpt.apps.owr.view.*"
-			   width="389" height="110" 
+			   width="439" height="162" 
 			   skinClass="skin.TitleWindowSkin" styleName="TitleWindow" title="UnAuthorized Access">
 	
 	<fx:Style>
@@ -20,12 +20,25 @@
 			}
 	</fx:Style>
 	
+	<fx:Script>
+		<![CDATA[
+			
+		public function setRole(theRole:String):void
+		{
+			if(theRole != null && theRole != '')
+				role.text = "  " + theRole;
+		}
+			
+		]]>
+	</fx:Script>
+			
 	<s:layout>
 		<s:VerticalLayout gap="10"/>
 	</s:layout>
 	
 	<s:Spacer height="10"/>
-	<s:Label  text="  You do not have permission to access ALFA." width="374" color="red"/>
-	<s:Label  text="  Access must be granted via AA SAM (System Access Manager)" width="100%" color="red"/>
+	<s:Label id="role"/>
+	<s:Label text="  You do not have permission to access ALFA." width="374" color="red"/>
+	<s:Label text="  Access must be granted via AA SAM (System Access Manager)" width="100%" color="red"/>
 	
 </s:TitleWindow>
