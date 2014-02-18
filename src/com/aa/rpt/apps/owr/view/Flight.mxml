@@ -3,7 +3,6 @@
 <s:NavigatorContent xmlns:fx="http://ns.adobe.com/mxml/2009" 
 		xmlns:s="library://ns.adobe.com/flex/spark" 
 		xmlns:mx="library://ns.adobe.com/flex/mx"
-		label="Flight"
 		height="100%" width="100%"
 		icon="{IconUtil.flt}">
 	<fx:Script>
@@ -21,34 +20,43 @@
 	<s:layout>
 		<s:VerticalLayout paddingTop="20" gap="20" />
 	</s:layout>
-	<s:Label text="Flight Information:" fontSize="24"  fontWeight="bold"/>
 	
 	<s:Form fontSize="14" horizontalCenter="0">
-		
-		<s:FormItem label="Flight Number:"
-					textAlign="right">
+		<s:FormItem label="Flight Number:" textAlign="right">
 			<s:TextInput id="flt_num" restrict="0-9" maxChars="4" widthInChars="4"/>
 		</s:FormItem>
-		<s:FormItem label="Depart From:"
-					textAlign="right">
+		
+		<s:FormItem label="Depart From:" textAlign="right">
 			<s:TextInput id="dpt_frm" maxChars="3" widthInChars="3" change="{dpt_frm.text = dpt_frm.text.toUpperCase()}"/>
 		</s:FormItem>
-		<s:FormItem label="Arrive At:"
-					textAlign="right">
+		
+		<s:FormItem label="Arrive At:" textAlign="right">
 			<s:TextInput id="dpt_arr" maxChars="3" widthInChars="3" change="{dpt_arr.text = dpt_arr.text.toUpperCase()}"/>
 		</s:FormItem>
-		<s:FormItem label="Flight Date:"
-					textAlign="right">
+		
+		<s:FormItem label="Flight Date:" textAlign="right">
 			<mx:DateField id="flightDate" selectedDate="{new Date()}"/>
 		</s:FormItem>
-		<s:FormItem label="Airlines:"
-					textAlign="right">
-			<s:RadioButton id="AACB" groupName="flt_al_RCB" label="AA" selected="true"/>
-			<s:RadioButton groupName="flt_al_RCB" id="BACB" label="BA"/>
-			<s:RadioButton groupName="flt_al_RCB" id="IBCB" label="IB"/>
-			<s:RadioButton groupName="flt_al_RCB" id="JLCB" label="JL"/>
-			<s:RadioButton groupName="flt_al_RCB" id="AYCB" label="AY"/>
-			<s:RadioButton groupName="flt_al_RCB" id="USCB" label="US"/>
+		
+		<s:FormItem label="Airlines:" textAlign="right">
+			<s:layout>
+				<s:HorizontalLayout/>
+			</s:layout>
+			
+			<s:RadioButton groupName="flt_al_RCB" label="AA" />
+			<s:RadioButton groupName="flt_al_RCB" label="BA" />
+			<s:RadioButton groupName="flt_al_RCB" label="IB" />
+			<s:RadioButton groupName="flt_al_RCB" label="JL" />
+			<s:RadioButton groupName="flt_al_RCB" label="AY" />
+			<s:RadioButton groupName="flt_al_RCB" label="US" />
+		</s:FormItem>
+		
+		<s:FormItem label="Suppress Availabilty:" textAlign="right">
+			<s:layout>
+				<s:HorizontalLayout verticalAlign="bottom"/>
+			</s:layout>
+			<s:CheckBox id="sup_av_flt"/>
+			<s:Label text="Build Routes Only" fontSize="10"/>
 		</s:FormItem>
 	</s:Form>
 	

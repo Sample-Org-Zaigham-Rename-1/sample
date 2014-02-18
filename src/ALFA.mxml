@@ -3,15 +3,16 @@
 			   xmlns:s="library://ns.adobe.com/flex/spark"
 			   xmlns:mx="library://ns.adobe.com/flex/mx"
 			   xmlns:view="com.aa.rpt.apps.owr.view.*"
-			   controlBarVisible="true" creationComplete="init()" skinClass="skin.ApplicationSkin">
+			   controlBarVisible="true"
+			   creationComplete="displaySearchCriteria(true)"
+			   skinClass="skin.ApplicationSkin">
 	
 	<fx:Style source="css\index.css"/>
-	
-	
 	
 	<fx:Declarations>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 		<s:DateTimeFormatter id="ddmmmyyyyhhmm" dateTimePattern="ddMMMyyyyHHmm"/>
+		<s:DateTimeFormatter id="ddmmmyyyyhhmm2" dateTimePattern="ddMMMyyyy HH:mm"/>
 		<s:DateTimeFormatter id="ddmmmyyyy" dateTimePattern="ddMMMyyyy"/>
 		<s:DateTimeFormatter id="mmddyyyy" dateTimePattern="MMddyyyy"/>
 			
@@ -41,9 +42,8 @@
 					  result="{getCabinAvailabiliyMultiResultHandler(event)}"/>
 		</s:RemoteObject>
 		
-		<s:HTTPService id="httpUserService" fault="httpUserService_faultHandler(event)"
-					   result="httpUserService_resultHandler(event)" resultFormat="e4x">
-		</s:HTTPService>
+		<s:HTTPService id="httpUserService" fault="userAccessFaultHandler(event)" result="userAccessResultHandler(event)" resultFormat="e4x"/>
+
 	</fx:Declarations>
 	
 	<fx:Script>
@@ -65,7 +65,6 @@
 			import mx.controls.Alert;
 			import mx.controls.Spacer;
 			import mx.core.FlexGlobals;
-			import mx.events.ResizeEvent;
 			import mx.managers.BrowserManager;
 			import mx.managers.IBrowserManager;
 			import mx.managers.PopUpManager;
@@ -77,43 +76,51 @@
 			import spark.components.BorderContainer;
 			import spark.components.Label;
 			
-			
-			
 			[Embed(source="images/rarrow.png")] 
 			[Bindable]static private var rArrow:Class;
 			[Embed(source="images/200px-Oneworld_logo_svg.png")]
 			[Bindable]static private var applogo:Class;
 			
+			[Bindable] public var alfaData:AlfaDataVO;
+			[Bindable] public var routeData:ArrayCollection;
 			
-			private var searchScreen:SearchScreen = null;
-			private var t:Timer;
+			private var searchScreen:SearchScreen;
+			private var curParms:SearchScreenVO = null;
+			private var mktParms:SearchScreenVO = null;
+			private var fltParms:SearchScreenVO = null;
 			
-			public function init():void
-			{
-				getCredentialsFromSiteMinder();
-				
-				showData(1);
-				
-				if(searchScreen == null)
-				{
-					searchScreen = SearchScreen(PopUpManager.createPopUp(this, SearchScreen, true));
-					searchScreen.addEventListener('getConnectionsEvent',getConnectionsEventHandler);
-					searchScreen.addEventListener('Event.RESIZE',resizeEventHandler);
-					//displayresults.addEventListener('ResizeEvent.RESIZE',DataGridResizeHandler);
-					PopUpManager.centerPopUp(searchScreen);
-				}
+			[Bindable] private var isGetAvailCancelled:Boolean = false;
+			[Bindable] private var isAvailRunning:Boolean = false;
 
-			}
+			private var pendingAvailFlts:ArrayCollection = new ArrayCollection();
+			private var jalFlightslist:ArrayCollection = new ArrayCollection();
 			
-			protected var dto:SearchScreenVO= new SearchScreenVO;
+			private var totalPendingAvail:int = 0;
+			private var pendingAvailDone:int = 0;
+			private var requestSent:int = 0;
+			private var totalFlights:Number = 0;
+			private var jalFlightCount:Number = 0;
 			
-			public function getCredentialsFromSiteMinder():void
+			private var listTimeStamp:Date;
+
+			//
+			//////////////////////////////////////////////
+			public function displaySearchCriteria(checkSiteMinderRole:Boolean = false):void
 			{
-				httpUserService.url = getServletURL();
-				httpUserService.send();
+				if(checkSiteMinderRole)
+					{
+					httpUserService.url = getServletURL();
+					httpUserService.send();
+					}
+
+				searchScreen = SearchScreen(PopUpManager.createPopUp(this, SearchScreen, true));
+				searchScreen.addEventListener('getConnectionsEvent', requestDataFromServer);
+				PopUpManager.centerPopUp(searchScreen);
+				searchScreen.populateControls(curParms, mktParms, fltParms);
 			}
 			
-			private function getServletURL():String{
+			private function getServletURL():String
+			{
 				var bm:IBrowserManager = BrowserManager.getInstance();
 				bm.init();
 				var url:String = bm.url;
@@ -124,19 +131,22 @@
 				var tokens:Array = subURL.split("/");
 				var webContext:String = tokens[1];
 				var userProfileServlet:String;
-				if(url.search("http") == -1){
+
+				if(url.search("http") == -1)
+					{
 					userProfileServlet = "http://localhost:8080/reaccom7-alfa/UserProfileServlet";
 					//userProfileServlet = "http://rmread013.tul.aa.com/reaccom7/UserProfileServlet?mode='test'";
 					//userProfileServlet = "https://reaaccom-stg1.aa.com/reaccom7/UserProfileServlet";
 					//userProfileServlet = "https://reaaccom-cert.aa.com/reaccom7/UserProfileServlet";
-					
-				}else{
+					}
+				else{
 					userProfileServlet = "http://"+serverNameWithPort+"/"+webContext+"/UserProfileServlet";
-				}
+					}
+
 				return userProfileServlet;
 			}
 
-			protected function httpUserService_resultHandler(event:ResultEvent):void
+			protected function userAccessResultHandler(event:ResultEvent):void
 			{
 				var xml:XML = null;
 				
@@ -157,136 +167,94 @@
 					tiUser.text = xml..firstName + " " + xml..lastName + " [" + xml..userRole + "]";
 			}
 			
-			protected function httpUserService_faultHandler(event:FaultEvent):void
+			protected function userAccessFaultHandler(event:FaultEvent):void
 			{
-				httpUserService_resultHandler(null);
+				userAccessResultHandler(null);
 				Alert.show(event.fault.toString());
 			}
 			
-			public function resizeEventHandler(e:ResizeEvent):void
-			{
-				searchScreen.height= (FlexGlobals.topLevelApplication.height)*.7;
-				searchScreen.width= FlexGlobals.topLevelApplication.width;
-				
-			}
-			
-			/* public function DataGridResizeHandler(e:ResizeEvent):void
-			{
-				displayresults.height=FlexGlobals.topLevelApplication.height;
-				displayresults.width= FlexGlobals.topLevelApplication.systemManager.getVisibleApplicationRect().width;
-			} */
-
-			protected function getBackEndBuildDate(event:MouseEvent):void
+			protected function getBackEndBuildDate():void
 			{
 				connectionAdvisorRemoteObject.getOperation('getBackEndBuildDate').send();
 			}
 
-			protected function searchCriteria_clickHandler(event:MouseEvent):void
+			//
+			///////////////////////////////////////////////////////////
+			public function requestDataFromServer(data:GetConnectionsDataEvent):void
 			{
-				// TODO Auto-generated method stub
-				searchCriteria.addEventListener('getConnectionsEvent',getConnectionsEventHandler);
+				if(data.inputParmsVO == null)
+					{
+					searchScreen.removeEventListener('getConnectionsEvent', requestDataFromServer);
+					PopUpManager.removePopUp(searchScreen);
+					return;
+					}
 				
-			}
-			
-			public function getConnectionsEventHandler(data:GetConnectionsDataEvent):void
-			{
-				dto=data.inputParmsVO;
-				getData(dto);
-				
-				
-			}
-			
+				var reqParms:GetConnectionsByMarketInputParmVO = new GetConnectionsByMarketInputParmVO();
 
-			private var searchCriteriaInput:SearchScreenVO;
-			private var inputParmsVO:GetConnectionsByMarketInputParmVO;
-			
-			public function getData(x:SearchScreenVO):void
-			{  
-				var flightLegs:Number;
-				searchCriteriaInput=x;
+				curParms = data.inputParmsVO;
 				
-				
-				inputParmsVO = new GetConnectionsByMarketInputParmVO();
+				if(curParms.searchType == 0)
+					{
+					mktParms = curParms;
 
-				if(x.index ==1)
-				{ 						
-					inputParmsVO.depSta= x.dep_sta;
-					inputParmsVO.arvSta=x.arr_sta;
-					inputParmsVO.minDate=ddmmmyyyyhhmm.format(x.strt_date);
-					inputParmsVO.maxDate=ddmmmyyyyhhmm.format(x.end_date);
-					inputParmsVO.domesticconnectTime=x.domconnect;
-					inputParmsVO.internationalconnectTime=x.intconnect;
-					inputParmsVO.sistercities=x.sistercities;
-					inputParmsVO.miles = x.miles;
-					inputParmsVO.mileagePercent = x.mileagePercent;
-					flightLegs=x.connections;
-					inputParmsVO.legs=String(flightLegs);
-					inputParmsVO.avoidStations=x.avoid_sta;
-					inputParmsVO.airlineCodes= x.carrierCodes;
+					reqParms.depSta = mktParms.depSta;
+					reqParms.arvSta = mktParms.arvSta;
+					reqParms.minDate = ddmmmyyyyhhmm.format(mktParms.depDateMin);
+					reqParms.maxDate = ddmmmyyyyhhmm.format(mktParms.depDateMax);
+					reqParms.domesticconnectTime = mktParms.domConxTime;
+					reqParms.internationalconnectTime = mktParms.intConxTime;
+					reqParms.sistercities = mktParms.useSisterCities;
+					reqParms.miles = mktParms.maxMileage;
+					reqParms.mileagePercent = mktParms.isMileageInPercent;
+					reqParms.legs = String(mktParms.numConx);
+					reqParms.avoidStations = mktParms.avoidStations;
+					reqParms.airlineCodes = mktParms.validAirlines;
 					
-					connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(inputParmsVO);
-				}
-					
-				else
-					
-				{
-					var flight_num:String= x.flight_num;
-					var flightCarrierClause:String = "";
-					flightCarrierClause = x.flt_airline;
-					
-					var startDate:Date = x.flt_date;
-					
-					var endDate:Date = new Date(x.flt_date.fullYear, x.flt_date.month, x.flt_date.date + 1, x.flt_date.hours, x.flt_date.minutes);
-					if( x.flt_dep_sta.length == 3 && x.flt_arr_sta.length == 3 )
+					connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(reqParms);
+					}
+				else{
+					fltParms = curParms;
+
+					if(fltParms.fltDepSta.length == 3 && fltParms.fltArvSta.length == 3 )
 						{
-						inputParmsVO.depSta = x.flt_dep_sta;
-						inputParmsVO.arvSta = x.flt_arr_sta;
-						inputParmsVO.minDate = ddmmmyyyyhhmm.format(startDate);
-						inputParmsVO.maxDate = ddmmmyyyyhhmm.format(endDate);
-						inputParmsVO.domesticconnectTime = '10';
-						inputParmsVO.internationalconnectTime = '10';
-						inputParmsVO.miles = null;
-						inputParmsVO.legs = '3';
-						inputParmsVO.avoidStations = null;
-						inputParmsVO.airlineCodes = flightCarrierClause;
-						inputParmsVO.flightNumber = Number(flight_num);
-						connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(inputParmsVO);
+						reqParms.depSta = fltParms.fltDepSta;
+						reqParms.arvSta = fltParms.fltArvSta;
+						reqParms.minDate = ddmmmyyyyhhmm.format(fltParms.fltDate);
+						reqParms.maxDate = ddmmmyyyyhhmm.format(new Date(fltParms.fltDate.fullYear, fltParms.fltDate.month, fltParms.fltDate.date + 1, fltParms.fltDate.hours, fltParms.fltDate.minutes));
+						reqParms.domesticconnectTime = '10';
+						reqParms.internationalconnectTime = '10';
+						reqParms.miles = null;
+						reqParms.legs = '3';
+						reqParms.avoidStations = null;
+						reqParms.airlineCodes = fltParms.fltAirline;
+						reqParms.flightNumber = Number(fltParms.fltNum);
+
+						connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(reqParms);
 						}
-					else {
-						var flightDateString:String = ddmmmyyyy.format(startDate);
-						connectionAdvisorRemoteObject.getOperation('getConnectionsByFlight').send(flight_num, flightCarrierClause, flightDateString);
+					else{
+						var flightDateString:String = ddmmmyyyy.format(fltParms.fltDate);
+
+						connectionAdvisorRemoteObject.getOperation('getConnectionsByFlight').send(fltParms.fltNum, fltParms.fltAirline, flightDateString);
 						}
-				}
+					}
 			}
-			
-			
-			[Bindable] public var routeData:ArrayCollection;
-			[Bindable] public var alfaData:AlfaDataVO;
-			
+
 			private function getConnectionsByMarketResultHandler(resultEvent:ResultEvent):void
 			{
-				
 				if(resultEvent == null || resultEvent.result == null)
-				{	
 					return;
-				}
 				
-					alfaData=null;
-					alfaData= resultEvent.result as AlfaDataVO;
-				 	routeData=null;
-				 	routeData = alfaData.routeList;
-
-				if(dto.screen_num==1)
-					setData(0);
-				else setData(1);
-				loadXMLData(routeData, alfaData.status);
+				processRouteDataResponse(resultEvent.result as AlfaDataVO);
 			}
-
-			private function getBackEndBuildDateFaultHandler(faultEvent:FaultEvent):void
+			
+			private function getConnectionsByFlightResultHandler(resultEvent:ResultEvent):void
 			{
-				Alert.show("Cannot Determine Back End Build Date...Back End is Most Likely Out of Date");
+				if(resultEvent == null || resultEvent.result == null)
+					return;
+				
+				processRouteDataResponse(resultEvent.result as AlfaDataVO);
 			}
-
+			
 			private function getBackEndBuildDateResultHandler(resultEvent:ResultEvent):void
 			{
 				Alert.show(resultEvent.result as String);
@@ -297,482 +265,196 @@
 				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
 			}
 			
-			private function getConnectionsByFlightResultHandler(resultEvent:ResultEvent):void
-			{
-				if(resultEvent == null || resultEvent.result == null)
-					return;
-
-				alfaData=null;
-				alfaData= resultEvent.result as AlfaDataVO;
-				routeData=null;
-				routeData = alfaData.routeList;
-				loadXMLData(routeData, alfaData.status);
-				
-			}
-			
 			private function getConnectionsByFlightFaultHandler(faultEvent:FaultEvent):void
 			{
 				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
 			}
-
-
-			private function setData(y:int):void
+			
+			private function getBackEndBuildDateFaultHandler(faultEvent:FaultEvent):void
 			{
-				if(y==0)
-				{
-					if(dto.index==1)
-					{
-						
-						searchCriteria.secMarket.secSearchStarttime.date.selectedDate=dto.strt_date;
-						searchCriteria.secMarket.secSearchStarttime.hours.value=dto.strt_date.hours
-						searchCriteria.secMarket.secSearchStarttime.minutes.value=dto.strt_date.minutes;
-						
-						
-						searchCriteria.secMarket.secSearchEndtime.date.selectedDate=dto.end_date;
-						searchCriteria.secMarket.secSearchEndtime.hours.value= dto.end_date.hours;
-						searchCriteria.secMarket.secSearchEndtime.minutes.value=dto.end_date.minutes;
-						
-						
-						searchCriteria.secMarket.secSearchTifrom.text=dto.dep_sta;
-						searchCriteria.secMarket.secSearchTiTo.text=dto.arr_sta;
-						searchCriteria.secMarket.secSearchdomconnect.text=dto.domconnect;
-						searchCriteria.secMarket.secSearchintconnect.text=dto.intconnect;
-						searchCriteria.secMarket.secSearchsistercityCB.selected=dto.sistercities;
-						fAA.enabled=false;
-						fBA.enabled=false;
-						fIB.enabled=false;
-						fJL.enabled=false;
-						fAY.enabled=false; 
-						fUS.enabled=false;  
-						fnonstop.selected=false;
-						fonestop.selected=false;
-						ftwostops.selected=false;
-						fAvl.selected=false;
-						fAA.selected=false;
-						fBA.selected=false;
-						fIB.selected=false;
-						fJL.selected=false;
-						fAY.selected=false; 
-						fUS.selected=false;  
-						searchCriteria.secMarket.secSearchAA.selected=false;
-						searchCriteria.secMarket.secSearchBA.selected=false;
-						searchCriteria.secMarket.secSearchIB.selected=false;
-						searchCriteria.secMarket.secSearchJL.selected=false;
-						searchCriteria.secMarket.secSearchAY.selected=false; 
-						searchCriteria.secMarket.secSearchUS.selected=false; 
-						
-						if(dto.carrierCodes.indexOf("AA") >=0)
-						{
-							searchCriteria.secMarket.secSearchAA.selected=true;
-							fAA.enabled=true;
-						}
-						
-						if(dto.carrierCodes.indexOf("BA") >=0)
-						{
-							searchCriteria.secMarket.secSearchBA.selected=true;
-							//fBA.selected=true;
-							fBA.enabled=true;
-							
-						}
-						
-						if(dto.carrierCodes.indexOf("IB") >=0)
-						{
-							searchCriteria.secMarket.secSearchIB.selected=true;
-							//fIB.selected=true;
-							fIB.enabled=true;
-						}
-						
-						if(dto.carrierCodes.indexOf("JL") >=0)
-						{
-							searchCriteria.secMarket.secSearchJL.selected=true;
-							//fJL.selected=true;
-							fJL.enabled=true;
-						}
-						
-						  if(dto.carrierCodes.indexOf("AY") >=0)
-						{
-							searchCriteria.secMarket.secSearchAY.selected=true;
-							//fAY.selected=true;
-							fAY.enabled=true;
-						}  
-						
-						 if(dto.carrierCodes.indexOf("US") >=0)
-						{
-							searchCriteria.secMarket.secSearchUS.selected=true;
-							//fUS.selected=true;
-							fUS.enabled=true;
-						}  
-						
-						 if((!(dto.carrierCodes.indexOf("AA") >=0) && !(dto.carrierCodes.indexOf("BA") >=0) && !(dto.carrierCodes.indexOf("IB") >=0) && 
-							!(dto.carrierCodes.indexOf("JL") >=0) && !(dto.carrierCodes.indexOf("AY") >=0) && !(dto.carrierCodes.indexOf("US") >=0)))  
-
-						{
-							searchCriteria.secMarket.secSearchAA.selected=true;
-							searchCriteria.secMarket.secSearchBA.selected=true;
-							searchCriteria.secMarket.secSearchIB.selected=true;
-							searchCriteria.secMarket.secSearchJL.selected=true;
-							searchCriteria.secMarket.secSearchAY.selected=true; 
-							searchCriteria.secMarket.secSearchUS.selected=true; 
-							fAA.enabled=true;
-							fBA.enabled=true;
-							fIB.enabled=true;
-							fJL.enabled=true;
-							fAY.enabled=true;
-							fUS.enabled=true; 
-						}
-						
-						if(dto.sistercities==true)
-							searchCriteria.secMarket.secSearchsistercityCB.selected=true;
-						
-						searchCriteria.secMarket.secSearchleginfo.value= dto.connections;
-						
-						if(dto.connections <3)
-							ftwostops.enabled=false;
-						if(dto.connections <2)
-						{
-							fonestop.enabled=false;
-							ftwostops.enabled=false;
-						}
-						
-						
-						
-						
-						if(dto.mileagePercent)
-						{
-							searchCriteria.secMarket.miles_in_percent.selected=true;
-							searchCriteria.secMarket.milesPercent.text=dto.miles;
-						}
-							
-						else
-						{
-							searchCriteria.secMarket.miles_in_num.selected=true;
-							searchCriteria.secMarket.miles.text=dto.miles;
-						}
-						
-					}
-					else
-					{   
-						
-						searchCriteria.secFlight.flt_num.text=dto.flight_num;
-						searchCriteria.secFlight.flightDate.selectedDate=dto.flt_date;
-						searchCriteria.secFlight.dpt_frm.text=dto.flt_dep_sta;
-						searchCriteria.secFlight.dpt_arr.text=dto.flt_arr_sta;
-						searchCriteria.secFlight.flt_al_RCB.selectedValue=dto.flt_airline;
-						
-						
-						filterresults.enabled=false;
-						searchCriteria.secSearchTab.selectedChild=searchCriteria.secFlight;
-					}
-				}
-				
-				
-				
-				if(y==1)
-				{
-					if(dto.index==1)
-					{
-						filterresults.enabled=true;
-						fAA.enabled=false;
-						fBA.enabled=false;
-						fIB.enabled=false;
-						fJL.enabled=false;
-						fAY.enabled=false;
-						fUS.enabled=false; 
-						fnonstop.enabled=false;
-						fonestop.enabled=false;
-						ftwostops.enabled=false;
-						fnonstop.selected=false;
-						fonestop.selected=false;
-						ftwostops.selected=false;
-						fAvl.selected=false;
-						fAA.selected=false;
-						fBA.selected=false;
-						fIB.selected=false;
-						fJL.selected=false;
-						fAY.selected=false; 
-						fUS.selected=false;  
-						
-						if(searchCriteria.secMarket.secSearchAA.selected)
-						{
-							
-							fAA.enabled=true;
-							
-							
-						}
-						
-						if(searchCriteria.secMarket.secSearchBA.selected)
-						{
-							
-							fBA.enabled=true;
-							
-						}
-						
-						if(searchCriteria.secMarket.secSearchIB.selected)
-						{
-							fIB.enabled=true;
-							
-						}
-						
-						if(searchCriteria.secMarket.secSearchJL.selected)
-						{
-							fJL.enabled=true;
-							
-						}
-						
-					    if(searchCriteria.secMarket.secSearchAY.selected)
-						{
-							fAY.enabled=true;
-							
-						} 
-						
-						 if(searchCriteria.secMarket.secSearchUS.selected)
-						{
-							fUS.enabled=true;
-							
-						} 
-						
-						if(searchCriteria.secMarket.secSearchALL.selected)
-						{
-							
-							fAA.enabled=true;
-							fBA.enabled=true;
-							fIB.enabled=true;
-							fJL.enabled=true;
-							fAY.enabled=true;  
-							fUS.enabled=true; 
-						}
-						
-						fAvl.selected=false;
-						
-						if(searchCriteria.secMarket.secSearchleginfo.value ==1)
-						{
-							fnonstop.enabled=true;
-							
-						}
-						
-						if(searchCriteria.secMarket.secSearchleginfo.value ==2)
-						{
-							fnonstop.enabled=true;
-							fonestop.enabled=true;
-						}
-						if (searchCriteria.secMarket.secSearchleginfo.value ==3)
-						{
-							fnonstop.enabled=true;
-							fonestop.enabled=true;
-							ftwostops.enabled=true;
-						}
-						
-					}
-						
-					else
-						filterresults.enabled=false;
-
-				}
-
+				Alert.show("Cannot Determine Back End Build Date...Back End is Most Likely Out of Date");
 			}
 			
-			[Bindable] private var cancelGetAvail:Boolean = false;
-			private var pendingAvailFlts:ArrayCollection = null;
-			private var flightsForAvail:ArrayCollection=null;
-			private var flightsByDate:ArrayCollection=null;
-			
-			private function loadXMLData(routeData:ArrayCollection, status:String):void
+			//
+			///////////////////////////////////////////////////////////
+			private function processRouteDataResponse(alfaDataVO:AlfaDataVO):void
 			{
-				
-				if(routeData.length==0)
-				{
-					if(dto.screen_num==1)
+				if(alfaDataVO.routeList.length == 0)
 					{
-//						searchScreen.Message.text = "NO FLIGHTS FOUND FOR THIS MARKET";
-						Alert.show((status == null ? "No Routes Found For This Market" : status));
-						return;
+					Alert.show((alfaDataVO.status == null ? "No Routes Found For This Market" : alfaDataVO.status));
+					return;
 					}
-						
-					else
-					{
-						Alert.show((status == null ? "No Routes Found For This Market" : status));
-						Availprogressbox.enabled=false;
-						return;
-					}
-				}
 				
-				searchScreen.removeEventListener('getConnectionsEvent',getConnectionsEventHandler);
+				searchScreen.removeEventListener('getConnectionsEvent', requestDataFromServer);
 				PopUpManager.removePopUp(searchScreen);
-				Availprogressbox.enabled=true;
-				var lineCnt:int = 0;
-				var keyGenCount:int = 0;
-				var routeKeyGenCount:int = 0;
-
-				cancelGetAvail = false;
-
-				 if(pendingAvailFlts == null)
-					pendingAvailFlts = new ArrayCollection();
-				else pendingAvailFlts.removeAll();
-				 
-				 if(flightsForAvail == null)
-					 flightsForAvail = new ArrayCollection();
-				 else flightsForAvail.removeAll();
 				
-				 if(flightsByDate ==null)
-					 flightsByDate=new ArrayCollection();
-				 else flightsByDate.removeAll();
-				 
-				 if(startTime!=null)
-					 startTime=null;
-				 
-				 if(endTime!=null)
-					 endTime=null;
-
-				var flight:GetAvailVO=null;
-				var u:int=0;
-				for(var g:int=0;g<alfaData.getAvailList.length;g++)
-				{
-					flight=alfaData.getAvailList[g] as GetAvailVO;
-					var basicFlightVO:BasicFlightDataVO=flight.fltData;
+				listTimeStamp = new Date();
+				isGetAvailCancelled = false;
+				isAvailRunning = false;
+				totalPendingAvail = 0;
+				
+				alfaData = alfaDataVO;
+				
+				if(routeData != null)
+					routeData.removeAll();
+				
+				routeData = alfaDataVO.routeList;
+				
+				for(var i:int = 1; i <= 9; i++)
+					{
+					var theName:Label = Label(scNames.getChildByName("name" + String(i)));
+					var theVal:Label  = Label(scVals.getChildByName("val" + String(i)));
 					
-					flightsForAvail.addItemAt((basicFlightVO),u);
-					u++;
-				}	
-					getPendingAvail(flightsForAvail,(dto.suppress_avail? 0:5));
-					
-				}
+					if(curParms.searchType == 0)
+						{
+						switch(i)
+							{
+							case 1:
+								theName.text = "Market:";
+								theVal.text = curParms.depSta + " to " + curParms.arvSta;
+								break;
+							case 2:
+								theName.text = "Sister Cities:";
+								theVal.text = (curParms.useSisterCities ? "Yes" : "No");
+								break;
+							case 3:
+								theName.text = "DEP Window Start:";
+								theVal.text = ddmmmyyyyhhmm2.format(curParms.depDateMin);
+								break;
+							case 4:
+								theName.text = "DEP Window End:";
+								theVal.text = ddmmmyyyyhhmm2.format(curParms.depDateMax);
+								break;
+							case 5:
+								theName.text = "Max Conx Time:";
+								theVal.text = "Dom: " + String(curParms.domConxTime) + "; Intl: " + String(curParms.intConxTime);
+								break;
+							case 6:
+								theName.text = "Max Mileage:";
+								theVal.text = (curParms.isMileageInPercent ? (String(curParms.maxMileage) + " Multiplier") : String(curParms.maxMileage));
+								break;
+							case 7:
+								theName.text = "Avoid Stations:";
+								theVal.text = (curParms.avoidStations.length == 0 ? "None" : curParms.avoidStations);
+								break;
+							case 8:
+								theName.text = "Max Legs:";
+								theVal.text = String(curParms.numConx);
+								break;
+							case 9:
+								theName.text = "Airlines:";
+								if(curParms.validAirlines.length == 0)
+									{
+									theVal.text = "All"
+									valAirlines.text = "";
+									}
+								else{
+									theVal.text = "";
+									valAirlines.text = "   [" + curParms.validAirlines + "]";
+									}
+								break;
+							}
+						}
+					else{
+						switch(i)
+							{
+							case 1:
+								theName.text = "Flight Number:";
+								theVal.text = curParms.fltNum;
+								break;
+							case 2:
+								theName.text = "Market:";
+								theVal.text = curParms.fltDepSta + "  " + curParms.fltArvSta;
+								break;
+							case 3:
+								theName.text = "Flight Date:";
+								theVal.text = ddmmmyyyyhhmm2.format(curParms.fltDate);
+								break;
+							case 4:
+								theName.text = "Airline:";
+								theVal.text = curParms.fltAirline;
+								valAirlines.text = "";
+								break;
+							default:
+								theName.text = "";
+								theVal.text = "";
+								break;
+							}
+						}
+					}
 				
-			
-			private function computeDistance(val:Number):String
-			{
-				var km:int = (val / .621371192);
+				fAA.selected = false;
+				fBA.selected = false;
+				fIB.selected = false;
+				fJL.selected = false;
+				fAY.selected = false; 
+				fUS.selected = false;  
+				fnonstop.selected = false;
+				fonestop.selected = false;
+				ftwostops.selected = false;
+				fAvl.selected = false;
 				
-				return("Miles: " + val.toString() + "; Km: " + km.toString());
+				getAvailForPendingFlights((curParms.suppressAvail ? 0 : 5), true);
 			}
-			
-			
-			
-			[Bindable] private var availRunning:Boolean = false;
-			[Bindable] private var totalPending:int = 0;
-			private var pendingDone:int = 0;
-			private var requestSent:int = 0;
-			private var totalFlights:Number=0;
-			private var jalFlightsPerDay:ArrayList= new ArrayList();
-			private var jalFlightCount:Number=0;
-			private var jalFlightslist:ArrayCollection = new ArrayCollection();
-			private function getPendingAvail(availFlts:ArrayCollection, numToSend:int):void
+
+			//
+			///////////////////////////////////////////////////////////
+			private function getAvailForPendingFlights(numToSend:int, firstTime:Boolean = false):void
 			{
+				var flightsForAvail:ArrayCollection = null;
+				
+				if(firstTime)
+					{
+					flightsForAvail = new ArrayCollection();
+					
+					for(var i:int = 0; i < alfaData.getAvailList.length; i++)
+						flightsForAvail.addItem(GetAvailVO(alfaData.getAvailList[i]).fltData);
+					
+					pendingAvailFlts.removeAll();
+					jalFlightslist.removeAll();
+					}
 				
 				var x:int=0;
 				
-				if(availFlts != null)
-				{	
-					
+				if(flightsForAvail != null)
+					{	
 					var basicFlightVO:BasicFlightDataVO;
 					var r:int=0;
-					for(var y:int=0;y<availFlts.length;y++)
-					{
-					 basicFlightVO = availFlts[y] as BasicFlightDataVO;
+					
+					for(var y:int=0;y<flightsForAvail.length;y++)
+						{
+						basicFlightVO = flightsForAvail[y] as BasicFlightDataVO;
 						
 						if(basicFlightVO.airlineCode=='JL')
-						{	
+							{	
 							jalFlightslist.addItemAt(basicFlightVO,r);
 							r++;
-						}
-						else
-						{ 
-							pendingAvailFlts.addItemAt(availFlts.getItemAt(y),x);
+							}
+						else{ 
+							pendingAvailFlts.addItemAt(flightsForAvail.getItemAt(y),x);
 							x++;
-						 } 
-
-						
-					}
+						 	}
+						}
 					
 					jalFlightCount=jalFlightslist.length;
-				/* 	if(jalFlightslist.length >0)
-					{
-						var dateList:ArrayList= new ArrayList();
-						var startdate:Date = searchCriteriaInput.strt_date;
-						var numDays:Number=(searchCriteriaInput.end_date.time-searchCriteriaInput.strt_date.time)/(1000 * 60 * 60 * 24);
-						numDays=Math.floor(numDays);
-						if(numDays < 1)
-							numDays= 1;
-						dateList.addItem(ddmmmyyyy.format(startdate));
-						for(var e:int=0; e<numDays;e++)
-						{
-
-							var nextDay:Date=new Date(startdate.time +(1000 * 60 * 60 * 24));
-							var day:String=ddmmmyyyy.format(nextDay);
-							dateList.addItem(day);
-							startdate=nextDay;
-						}
-						
-						
-						var flightlist:ArrayList=new ArrayList();
-						var h:int=0;
-						for(var n:int=0;n<dateList.length;n++)
-						{ 
-							//flightsByDate.addItemAt(new ArrayList(),n);
-							 for(var m:int=0;m<jalFlightslist.length;m++)
-							{ 
-								var g:int=0;
-								basicFlightVO=null;
-								basicFlightVO=jalFlightslist[m] as BasicFlightDataVO;
-								if(basicFlightVO.flightDate.substr(0,9) == dateList.getItemAt(n) as String)
-								{
-									flightlist.addItemAt(basicFlightVO,g);
-									//flightlist.push(basicFlightVO);
-									jalFlightslist.removeItemAt(m);
-									m--;
-									g++;
-									
-								}
-								
-							 } 
-							//getMulitipeFlightAvailability(flightsByDate);
-							 
-							 if(flightlist.length>0)
-							 {
-							 flightsByDate.addItemAt(new ArrayList(flightlist.toArray()),h);
-							 h++;
-							 flightlist.removeAll();
-							 }
-							
-						}
-						
-					}  */
 					
+					totalPendingAvail= flightsForAvail.length;
+					pendingAvailDone = 0;
 					
-					
-					totalPending=0;
-					//totalPending = pendingAvailFlts.length ;
-					totalPending= availFlts.length;
-					pendingDone = 0;
-					
-					stillPending.text='';
-					stillPending.text = String(totalPending);
-					totalFlights= availFlts.length;
-					/* if ( pendingAvailFlts!=null)
-					{
-						if(pendingAvailFlts.length>0)
-							totalFlights= totalFlights +pendingAvailFlts.length;
+					stillPending.text = String(totalPendingAvail);
+					totalFlights= flightsForAvail.length;
 					}
-					if(flightsByDate !=null)	
-						totalFlights= totalFlights+flightsByDate.length; */
-				}
 				
-			
-				
-				
-				 /* if(numToSend > (pendingAvailFlts.length))
-					numToSend = pendingAvailFlts.length;  */
 				if(numToSend > totalFlights)
 					numToSend = totalFlights;
 				
 				while(numToSend > 0)
 				{	
-					searchCriteria.SearchAgain.enabled = false;
-					filterresults.enabled=false;
-					availRunning = true;
+					isAvailRunning = true;
 					
 					if(pendingAvailFlts!=null)
 					{
-						if(pendingAvailFlts.length>0 && cancelGetAvail==false && totalFlights!=0)
+						if(pendingAvailFlts.length>0 && isGetAvailCancelled==false && totalFlights!=0)
 						{
 							getSingleFlightAvailability(pendingAvailFlts.getItemAt(0) as BasicFlightDataVO);
 							pendingAvailFlts.removeItemAt(0);
@@ -784,21 +466,12 @@
 						
 						if(pendingAvailFlts.length==0)
 						{
-							if(jalFlightslist!=null && cancelGetAvail==false && totalFlights!=0)
+							if(jalFlightslist!=null && isGetAvailCancelled==false && totalFlights!=0)
 							{ 
-								/* if(flightsByDate.length >0) */
+
 								if(jalFlightslist.length >0)
 								{
-									//jalFlightsPerDay.removeAll();
-									//jalFlightsPerDay.addAll(flightsByDate.getItemAt(0)  as ArrayList);
-									//getMulitipleFlightAvailability(flightsByDate.getItemAt(0) as ArrayList);
 									getMulitipleFlightAvailability(jalFlightslist);
-									//flightsByDate.removeItemAt(0);
-									
-									
-									//++requestSent;
-									/* requestSent= requestSent+jalFlightsPerDay.length;
-									totalFlights= totalFlights-jalFlightsPerDay.length; */
 									requestSent= requestSent+jalFlightslist.length;
 									totalFlights= totalFlights-jalFlightslist.length;
 									jalFlightslist.removeAll();
@@ -811,24 +484,13 @@
 						}
 
 					}
-					/* if(flightsByDate!=null && cancelGetAvail==false && totalFlights!=0)	 */
 					else
 					{
-						if(jalFlightslist!=null && cancelGetAvail==false && totalFlights!=0)
+						if(jalFlightslist!=null && isGetAvailCancelled==false && totalFlights!=0)
 						{ 
-							/* if(flightsByDate.length >0) */
 							if(jalFlightslist.length >0)
 							{
-								//jalFlightsPerDay.removeAll();
-								//jalFlightsPerDay.addAll(flightsByDate.getItemAt(0)  as ArrayList);
-								//getMulitipleFlightAvailability(flightsByDate.getItemAt(0) as ArrayList);
 								getMulitipleFlightAvailability(jalFlightslist);
-								//flightsByDate.removeItemAt(0);
-								
-								
-								//++requestSent;
-								/* requestSent= requestSent+jalFlightsPerDay.length;
-								totalFlights= totalFlights-jalFlightsPerDay.length; */
 								requestSent= requestSent+jalFlightslist.length;
 								totalFlights= totalFlights-jalFlightslist.length;
 								jalFlightslist.removeAll();
@@ -843,8 +505,14 @@
 						
 				}
 			}
+
+			private function computeDistance(val:Number):String
+			{
+				var km:int = (val / .621371192);
+				
+				return("Miles: " + val.toString() + "; Km: " + km.toString());
+			}
 			
-			//private function getMulitipleFlightAvailability(flightList:ArrayList):void
 			private function getMulitipleFlightAvailability(flightList:ArrayCollection):void
 			{
 				if(flightList.length>0)
@@ -979,7 +647,7 @@
 			
 			private function getCabinAvailabiliyMultiResultHandler(resultEvent:ResultEvent):void
 			{
-				var availablityList:ArrayCollection=resultEvent.result as ArrayCollection;
+				var availablityList:ArrayCollection = resultEvent.result as ArrayCollection;
 				
 				for(var i:int = 0; i < availablityList.length; i++)
 				{
@@ -994,7 +662,6 @@
 			
 			 private function getCabinAvailabiliyResultHandler(resultEvent:ResultEvent):void
 			{
-
 				 var faVO:FlightAvailabilityVO = resultEvent.result as FlightAvailabilityVO;
 				 
 				 populateAvailability(faVO);
@@ -1031,7 +698,6 @@
 								if(routeID != route.routeID)
 									continue;
 
-								//var flightlegArray:Array=
 								var flightLeg:FlightLegVO=flightLegs[index];
 								var availabilityVO:AvailabilityVO=faVO.availabilityVO;
 								if(availabilityVO)
@@ -1041,7 +707,6 @@
 									flightLeg.cabinData=cabinData; 
 									}
 								
-								//route.totalSeats=String(total);
 								var totalAvail:String=calculateTotalAvailability(route);
 								
 								var setTotalAvail:Boolean=true;
@@ -1051,11 +716,8 @@
 									var flightleg:FlightLegVO= flightLegs[l];
 									if(flightleg.cabinData==''|| flightleg.cabinData==null||StringUtil.trim(flightleg.cabinData)=='')
 										setTotalAvail=false;
-									/* else
-									setTotalAvail=false; */
 									}
 								
-								//if(totalAvail!=null)
 								if(setTotalAvail==true && totalAvail!=null)	 
 									{ 
 									route.totalSeats='';
@@ -1068,58 +730,46 @@
 						}
 					}
 				else{
-					cancelGetAvail = true;
+					isGetAvailCancelled = true;
 					Alert.show(faVO.status);
 					}
 					
-				++pendingDone;
+				++pendingAvailDone;
 				--requestSent;
 				
-				stillPending.text = String(totalPending - pendingDone);
+				stillPending.text = String(totalPendingAvail - pendingAvailDone);
 				
-				if((pendingDone % 10) == 0 || requestSent == 0)
-				{
+				if((pendingAvailDone % 10) == 0 || requestSent == 0)
 					routeData.refresh();
-				}
 				
-				if(cancelGetAvail)
-					searchCriteria.SearchAgain.enabled = true;
-				filterresults.enabled=true;
-				
-				if(!cancelGetAvail)
-					getPendingAvail(null, 1);
+				if(!isGetAvailCancelled)
+					getAvailForPendingFlights(1);
 				else if(requestSent == 0)
-					cancelGetAvail = false; 
+					isGetAvailCancelled = false; 
 				
 				if(requestSent == 0)
-				{
-					availRunning = false;
-					searchCriteria.SearchAgain.enabled = true;
-					filterresults.enabled=true;
-				} 
+					isAvailRunning = false;
 			}
 			
 			private function getCabinAvailabiliyFaultHandler(faultEvent:FaultEvent):void
 			{
 				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
 				
-				++pendingDone;
+				++pendingAvailDone;
 				--requestSent;
 				
-				stillPending.text = String(totalPending - pendingDone);
+				stillPending.text = String(totalPendingAvail - pendingAvailDone);
 				
-				if((pendingDone % 10) == 0 || requestSent == 0)
-				{
+				if((pendingAvailDone % 10) == 0 || requestSent == 0)
 					routeData.refresh();
-				}
 				
-				if(!cancelGetAvail)
-					getPendingAvail(null, 1);
+				if(!isGetAvailCancelled)
+					getAvailForPendingFlights(1);
 				else if(requestSent == 0)
-					cancelGetAvail = false;
+					isGetAvailCancelled = false;
 				
 				if(requestSent == 0)
-					availRunning = false;
+					isAvailRunning = false;
 			}
 			
 			
@@ -1127,57 +777,22 @@
 			{
 				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
 				
-				++pendingDone;
-				//--requestSent;
-				//requestSent= requestSent-jalFlightsPerDay.length;
-				requestSent= requestSent-jalFlightCount;
+				++pendingAvailDone;
+				requestSent = requestSent-jalFlightCount;
 				
-				stillPending.text = String(totalPending - pendingDone);
+				stillPending.text = String(totalPendingAvail - pendingAvailDone);
 				
-				if((pendingDone % 10) == 0 || requestSent == 0)
-				{
+				if((pendingAvailDone % 10) == 0 || requestSent == 0)
 					routeData.refresh();
-				}
 				
-				if(!cancelGetAvail)
-					getPendingAvail(null, 1);
+				if(!isGetAvailCancelled)
+					getAvailForPendingFlights(1);
 				else if(requestSent == 0)
-					cancelGetAvail = false;
+					isGetAvailCancelled = false;
 				
 				if(requestSent == 0)
-					availRunning = false;
+					isAvailRunning = false;
 			}
-
-			private function showData(which:Number):void
-			{
-				if(which == 1)
-				{
-					statusBox.visible = true;
-					bc.visible=true;
-					searchCriteria.visible=true;
-					searchCriteria.includeInLayout=true;
-					Availprogressbox.visible=true;
-					Availprogressbox.includeInLayout=true;
-					filterresults.visible=true;
-					filterresults.includeInLayout=true;
-					hg.visible=true;
-				}
-				else 
-				{
-					
-					bc.visible=false;
-					searchCriteria.visible=false;
-					searchCriteria..includeInLayout=true;
-					Availprogressbox.visible=false;
-					Availprogressbox.includeInLayout=true;
-					statusBox.visible = false;
-					filterresults.visible=false;
-					hg.visible=false;
-				
-				}
-			}
-			
-
 
 			public function startFiltering(item:Object):Boolean
 			{
@@ -1214,7 +829,6 @@
 						{ 
 							if(routeAirlineCodes[s] == routeAirlineCodes[s+1])
 							{
-								//routeAirlineCodes.shift();
 								routeAirlineCodes.splice(s,1);
 								s--;
 							}
@@ -1403,61 +1017,25 @@
 				routeData.filterFunction = startFiltering;
 				routeData.refresh();
 			}
-			
-			private var startTime:Date;
-			private var endTime:Date;
-			private function startTimer():void 
-			{
-				
-				startTime=new Date;
-				filterresults.enabled=true;
-			}
-			
 		
-			public function clickHandler(event:Event):void
+			public function startGettingAvailButton():void
 			{
-				var event1:MouseEvent=null;
-				if(totalPending > 0)
-				{
-					if(filterresults.enabled==true)
-					{
-						fAA.selected=false;
-						fBA.selected=false;
-						fIB.selected=false;
-						fJL.selected=false;
-						fUS.selected=false; 
-						fAY.selected=false; 
-						fonestop.selected=false;
-						fnonstop.selected=false;
-						ftwostops.selected=false;
-						fAvl.selected=false;
-						filterresults_clickHandler(event1);
-						filterresults.enabled=false;
-					}
-					if(startTime!=null)
-					{
-						endTime=new Date;
-						var timeElapsed:Number= endTime.time-startTime.time;
-						
-						if((timeElapsed/1000)>=180)
-						{
-							Alert.show("Availability MAY Have Changed. Please Search Again.","PLEASE NOTE:");
-							return;
-						}
-						else
-							getPendingAvail(null, 5);
-					}
-					else
-						getPendingAvail(null, 5);
-					
-					
-				}
-				else
+				if(totalPendingAvail < 1)
 					return;
-				
+
+				if(listTimeStamp != null)
+					{
+					var timeElapsed:Number = (new Date()).time - listTimeStamp.time;
+						
+					if((timeElapsed / 1000) >= 180)
+						{
+						Alert.show("List Older Than 3 Minutes, Availability MAY Have Changed. Please Search Again.","PLEASE NOTE:");
+						return;
+						}
+					}
+
+				getAvailForPendingFlights(5);
 			}
-			
-			
 		]]>
 	</fx:Script>
 	
@@ -1492,15 +1070,13 @@
 			<s:Spacer width="10%"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
-					 text="Build Date: 31JAN2014" click="getBackEndBuildDate(event)"/>
+					 text="Build Date: 18FEB2014" click="getBackEndBuildDate()"/>
 			
 			<s:Spacer width="100%"/>
-			
-			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic"
-					 fontWeight="bold"/>
-			<!--<s:Spacer width="100%"/>-->
-			<s:Button id="LogOutButton" visible="false" label="Logout" color="#00009C"
-					  fontWeight="bold" includeInLayout="true"/>
+			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic" fontWeight="bold"/>
+
+			<!-- s:Spacer width="100%"/ -->
+			<!-- s:Button id="LogOutButton" visible="false" label="Logout" color="#00009C" fontWeight="bold" includeInLayout="true"/ -->
 		</s:HGroup>		 
 	</s:controlBarContent>
 	
@@ -1511,128 +1087,144 @@
 					verticalScrollPolicy="auto">
 			<s:VGroup height="100%" includeInLayout="true">
 				
-				<s:SkinnableContainer id="Availprogressbox" visible="false"
-									  width="{searchCriteria.width}" horizontalCenter="0"
-									  includeInLayout="true" skinClass="skin.AvailabilityBoxSkin">
+				<s:SkinnableContainer id="Availprogressbox" width="260" horizontalCenter="0" skinClass="skin.AvailabilityBoxSkin">
 					<s:layout>
 						<s:VerticalLayout/>
 					</s:layout>
-					<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold"
-							 text="Availability Process:"/>
-					<s:Spacer/>
-					<s:BorderContainer id="bc" visible="false" width="100%" height="100%"
-									   borderColor="{(availRunning ? 0xB40000 : 0x007F00)}"
+					
+					<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Availability Process:"/>
+					
+					<s:BorderContainer visible="true" width="100%" height="100%"
+									   borderColor="{(isAvailRunning ? 0xB40000 : 0x007F00)}"
 									   borderStyle="solid" borderWeight="2" horizontalCenter="0"
 									   includeInLayout="true">
 						<s:layout>
-							<s:VerticalLayout gap="3" paddingBottom="10" paddingLeft="25"
-											  paddingTop="10"/>
+							<s:VerticalLayout gap="2" paddingBottom="2" paddingLeft="2" paddingTop="2"/>
 						</s:layout>
-						<s:VGroup id="statusBox" visible="false" fontWeight="bold">
+						
+						<s:VGroup id="statusBox" visible="true" fontWeight="bold">
 							<s:HGroup includeInLayout="true">
-								<s:Label color="{(availRunning ? 0xB40000 : 0x007F00)}"
-										 text="Status: "/> 
-								<s:Label color="{(availRunning ? 0xB40000 : 0x007F00)}"
-										 text="{(availRunning ? 'Running...' : 'Stopped')}"/>
+								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="Status: "/> 
+								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="{(isAvailRunning ? 'Running...' : 'Stopped')}"/>
 							</s:HGroup>
 							<s:HGroup includeInLayout="true">
-								<s:Label color="{(availRunning ? 0xB40000 : 0x007F00)}"
-										 text="Flights Pending Availability: "/>
-								<s:Label id="stillPending"
-										 color="{(availRunning ? 0xB40000 : 0x007F00)}"/>
+								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="Flights Pending Availability: "/>
+								<s:Label id="stillPending" color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"/>
 							</s:HGroup>
-							<s:Spacer/>
-							<s:VGroup gap="5">
-								<s:HGroup gap="45">	
-									<s:Button id="cxlbtn" label="Stop"
-											  click="{cancelGetAvail = true;startTimer()}"
-											  color="{(availRunning ? 0xB40000 : 0x007F00)}"
-											  enabled="{availRunning}"/>
-									<s:Button label="Start"
-											  click="{cancelGetAvail = false;clickHandler(event)}"
-											  color="{(availRunning ? 0xB40000 : 0x007F00)}"
-											  enabled="{!availRunning}"/>
-								</s:HGroup>
-								<s:Label visible="{cancelGetAvail}" color="#B40000"
-										 text="CANCELLING...One Moment..."/>
-								<!--<s:Label id="QueryTime" includeInLayout="true" fontWeight="bold"/>-->
-							</s:VGroup>
+							<s:Label visible="{isGetAvailCancelled}" color="#B40000" text="CANCELLING...One Moment..."/>
+							<s:HGroup  horizontalAlign="center" gap="20">	
+								<s:Button id="cxlbtn" label="Stop"
+										  click="{isGetAvailCancelled = true;}"
+										  color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"
+										  enabled="{isAvailRunning}"/>
+								<s:Button label="Start"
+										  click="{isGetAvailCancelled = false; startGettingAvailButton();}"
+										  color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"
+										  enabled="{!isAvailRunning}"/>
+							</s:HGroup>
 						</s:VGroup>
 					</s:BorderContainer>
-					
+				</s:SkinnableContainer>
+
+				<s:SkinnableContainer width="260" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
+					<s:VGroup width="100%">
+						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Last Search:"/>
+						<s:Spacer/>
+						
+						<s:BorderContainer id="newSearch"  
+										   borderWeight="2" borderStyle="solid" includeInLayout="true"
+										   width="100%" horizontalCenter="0">
+							<s:layout>
+								<s:VerticalLayout paddingBottom="2" paddingLeft="2" paddingTop="2"/>
+							</s:layout>
+							
+							<s:HGroup>
+								<s:VGroup id="scNames">
+									<s:Label name="name1"  fontWeight="bold"/>
+									<s:Label name="name2"  fontWeight="bold"/>
+									<s:Label name="name3"  fontWeight="bold"/>
+									<s:Label name="name4"  fontWeight="bold"/>
+									<s:Label name="name5"  fontWeight="bold"/>
+									<s:Label name="name6"  fontWeight="bold"/>
+									<s:Label name="name7"  fontWeight="bold"/>
+									<s:Label name="name8"  fontWeight="bold"/>
+									<s:Label name="name9"  fontWeight="bold"/>
+								</s:VGroup>
+								<s:VGroup id="scVals">
+									<s:Label name="val1"/>
+									<s:Label name="val2"/>
+									<s:Label name="val3"/>
+									<s:Label name="val4"/>
+									<s:Label name="val5"/>
+									<s:Label name="val6"/>
+									<s:Label name="val7"/>
+									<s:Label name="val8"/>
+									<s:Label name="val9"/>
+								</s:VGroup>
+							</s:HGroup>
+							<s:Label id="valAirlines"/>
+							
+						</s:BorderContainer>
+						
+						<s:Spacer height="10"/>
+						<s:HGroup>
+							<s:Button enabled="{!isAvailRunning}" label="NEW Search" fontWeight="bold" click="{displaySearchCriteria();}" />
+						</s:HGroup>
+						
+					</s:VGroup>
 				</s:SkinnableContainer>
 				
-				<view:SearchCriteriaBox id="searchCriteria"
-										click="searchCriteria_clickHandler(event)"/>
-				
-				
-				<s:SkinnableContainer id="filterresults" visible="false"
-									  width="{searchCriteria.width}" backgroundColor="#FFFFFF"
-									  includeInLayout="true" skinClass="skin.AvailabilityBoxSkin">
-					
+				<s:SkinnableContainer enabled="{!isAvailRunning}" width="260" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
 					<s:VGroup width="100%">
 						
-						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold"
-								 text="Filter Results:"/>
-						<s:Spacer/>
-						<s:BorderContainer id="bc2" width="100%" borderStyle="solid" borderWeight="2"
+						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Filter Results:"/>
+
+						<s:BorderContainer width="100%" borderStyle="solid" borderWeight="2"
 										   horizontalCenter="0" includeInLayout="true">
 							
-							<s:Group left="25" right="25" top="10" bottom="5">
+							<s:Group  left="2" right="2" top="2" bottom="2">
 								<s:layout>
 									<s:VerticalLayout horizontalAlign="left" verticalAlign="middle"/>
 								</s:layout>
 								
-								<s:Label fontSize="16" fontWeight="bold" text="Airlines:"/>
+								<s:Label fontWeight="bold" text="Airlines:"/>
 								
 								<s:HGroup>
 									<s:CheckBox id="fAA" label="AA"/>
 									<s:CheckBox id="fBA" label="BA"/>
 									<s:CheckBox id="fIB" label="IB"/>
+								</s:HGroup>
+								<s:HGroup>
 									<s:CheckBox id="fJL" label="JL"/>
 									<s:CheckBox id="fAY" label="AY"/>
 									<s:CheckBox id="fUS" label="US"/>
-								</s:HGroup>
-								
+								</s:HGroup>								
 								
 								<s:Spacer height="4"/>
-								<s:Label fontSize="16" fontWeight="bold" text="Connections:"/>
+								<s:Label fontWeight="bold" text="Connections:"/>
 								<s:HGroup>
-									<s:CheckBox id="fnonstop" label="Nonstop"/>
-									<s:CheckBox id="fonestop" label="1 Stop"/>
-									<s:CheckBox id="ftwostops" label="2 Stops"/>
+									<s:CheckBox id="fnonstop"  label="1 Leg"/>
+									<s:CheckBox id="fonestop"  label="2 Leg"/>
+									<s:CheckBox id="ftwostops" label="3 Leg"/>
 								</s:HGroup>
 								
 								<s:Spacer height="4"/>
 								<s:HGroup verticalAlign="middle">
-									<s:Label fontSize="16" fontWeight="bold"
-											 text="Only routes with Availability:"/>
+									<s:Label fontWeight="bold" text="Available Routes Only:"/>
 									<s:CheckBox id="fAvl"/>
 								</s:HGroup>
 								
-								<s:Spacer height="4"/>
-								<s:HGroup includeInLayout="true">
-									<!--<s:Label color="{(availRunning ? 0xB40000 : 0x007F00)}" text="Status: " />-->
-									<s:Label id="stillfiltering" visible="false"
-											 color="{(availRunning ? 0xB40000 : 0x007F00)}"
-											 text="Status:Done"/>
-								</s:HGroup>
-								<!--<s:Label id="filterstatusMessage" color="0xB40000" width="100%" text="" includeInLayout="true" visible="true" fontSize="13"/>-->
-								
-								<s:Spacer height="15"/>
-								<s:HGroup>
-									<s:Spacer width="60"/>
-									<s:Button id="Filter" label="Filter"
+								<s:HGroup width="100%" horizontalAlign="center">
+									<s:Button id="Filter" label="Apply Filter"
 											  click="{filterresults_clickHandler(event)}"
 											  fontWeight="bold" horizontalCenter="0"/>
 								</s:HGroup>
 							</s:Group>
 							
 						</s:BorderContainer>
-						
 					</s:VGroup>
-					
 				</s:SkinnableContainer>
+				
 			</s:VGroup>
 		</s:Scroller>
 
