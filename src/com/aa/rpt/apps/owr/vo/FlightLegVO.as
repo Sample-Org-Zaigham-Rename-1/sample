@@ -12,8 +12,9 @@ package com.aa.rpt.apps.owr.vo
 		public var departureTime:String;
 		public var arrivalTime:String;
 		public var scheduledTimeInGMT:String;
-		public var seats:String;
 		public var miles:String;
+		
+		public var seats:String;
 		public var cabinData:String;
 		
 		public function toString():String{

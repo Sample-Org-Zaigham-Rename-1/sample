@@ -12,7 +12,7 @@
 	<fx:Declarations>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
 		<s:DateTimeFormatter id="ddmmmyyyyhhmm" dateTimePattern="ddMMMyyyyHHmm"/>
-		<s:DateTimeFormatter id="ddmmmyyyyhhmm2" dateTimePattern="ddMMMyyyy HH:mm"/>
+		<s:DateTimeFormatter id="ddmmmyyyyhhmm2" dateTimePattern="ddMMM HH:mm"/>
 		<s:DateTimeFormatter id="ddmmmyyyy" dateTimePattern="ddMMMyyyy"/>
 		<s:DateTimeFormatter id="mmddyyyy" dateTimePattern="MMddyyyy"/>
 			
@@ -82,7 +82,7 @@
 			[Bindable]static private var applogo:Class;
 			
 			[Bindable] public var alfaData:AlfaDataVO;
-			[Bindable] public var routeData:ArrayCollection;
+			[Bindable] public var routeList:ArrayCollection;
 			
 			private var searchScreen:SearchScreen;
 			private var curParms:SearchScreenVO = null;
@@ -92,8 +92,9 @@
 			[Bindable] private var isGetAvailCancelled:Boolean = false;
 			[Bindable] private var isAvailRunning:Boolean = false;
 
+			private var fltsPendingAvail:ArrayCollection = new ArrayCollection();
 			private var pendingAvailFlts:ArrayCollection = new ArrayCollection();
-			private var jalFlightslist:ArrayCollection = new ArrayCollection();
+			private var pendingAvailFltsJAL:ArrayCollection = new ArrayCollection();
 			
 			private var totalPendingAvail:int = 0;
 			private var pendingAvailDone:int = 0;
@@ -295,10 +296,10 @@
 				
 				alfaData = alfaDataVO;
 				
-				if(routeData != null)
-					routeData.removeAll();
+				if(routeList != null)
+					routeList.removeAll();
 				
-				routeData = alfaDataVO.routeList;
+				routeList = alfaDataVO.routeList;
 				
 				for(var i:int = 1; i <= 9; i++)
 					{
@@ -318,16 +319,16 @@
 								theVal.text = (curParms.useSisterCities ? "Yes" : "No");
 								break;
 							case 3:
-								theName.text = "DEP Window Start:";
+								theName.text = "DEP Time Start:";
 								theVal.text = ddmmmyyyyhhmm2.format(curParms.depDateMin);
 								break;
 							case 4:
-								theName.text = "DEP Window End:";
+								theName.text = "DEP Time End:";
 								theVal.text = ddmmmyyyyhhmm2.format(curParms.depDateMax);
 								break;
 							case 5:
 								theName.text = "Max Conx Time:";
-								theVal.text = "Dom: " + String(curParms.domConxTime) + "; Intl: " + String(curParms.intConxTime);
+								theVal.text = "Dom:" + String(curParms.domConxTime) + "; Intl:" + String(curParms.intConxTime);
 								break;
 							case 6:
 								theName.text = "Max Mileage:";
@@ -397,131 +398,119 @@
 				getAvailForPendingFlights((curParms.suppressAvail ? 0 : 5), true);
 			}
 
+			// NEW NEW
+			///////////////////////////////////////////////////////////
+			private function getAvailForPendingFlightsNEW(firstTime:Boolean = false):void
+			{
+				if(firstTime)
+					{
+					fltsPendingAvail.removeAll();
+						
+					for(var i:int = 0; i < alfaData.getAvailList.length; i++)
+						fltsPendingAvail.addItem(GetAvailVO(alfaData.getAvailList[i]).fltData);
+						
+					stillPending.text = String(fltsPendingAvail.length);
+					
+					if(curParms.suppressAvail)
+						return;
+					}
+				
+/***				
+				if(numToSend > totalFlights)
+					numToSend = totalFlights;
+
+				while(numToSend > 0)
+					{
+					isAvailRunning = true;
+						
+					if(pendingAvailFlts.length > 0)
+						{
+						if(isGetAvailCancelled == false && totalFlights != 0)
+							{
+							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliy').send(pendingAvailFlts.getItemAt(0) as BasicFlightDataVO);
+							pendingAvailFlts.removeItemAt(0);
+								
+							++requestSent;
+							--totalFlights;
+							}
+						}
+					else if(pendingAvailFltsJAL.length > 0)
+						{
+						if(isGetAvailCancelled == false && totalFlights != 0)
+							{
+							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(pendingAvailFltsJAL);
+								
+							requestSent += pendingAvailFltsJAL.length;
+							totalFlights -= pendingAvailFltsJAL.length;
+								
+							pendingAvailFltsJAL.removeAll();
+							}
+						}
+						
+					--numToSend;
+					}
+***/ 
+			}
+			
 			//
 			///////////////////////////////////////////////////////////
 			private function getAvailForPendingFlights(numToSend:int, firstTime:Boolean = false):void
 			{
-				var flightsForAvail:ArrayCollection = null;
-				
 				if(firstTime)
 					{
-					flightsForAvail = new ArrayCollection();
+					pendingAvailFltsJAL.removeAll();
+					pendingAvailFlts.removeAll();
 					
 					for(var i:int = 0; i < alfaData.getAvailList.length; i++)
-						flightsForAvail.addItem(GetAvailVO(alfaData.getAvailList[i]).fltData);
-					
-					pendingAvailFlts.removeAll();
-					jalFlightslist.removeAll();
-					}
-				
-				var x:int=0;
-				
-				if(flightsForAvail != null)
-					{	
-					var basicFlightVO:BasicFlightDataVO;
-					var r:int=0;
-					
-					for(var y:int=0;y<flightsForAvail.length;y++)
 						{
-						basicFlightVO = flightsForAvail[y] as BasicFlightDataVO;
-						
-						if(basicFlightVO.airlineCode=='JL')
-							{	
-							jalFlightslist.addItemAt(basicFlightVO,r);
-							r++;
-							}
-						else{ 
-							pendingAvailFlts.addItemAt(flightsForAvail.getItemAt(y),x);
-							x++;
-						 	}
+						var theFlt:BasicFlightDataVO = GetAvailVO(alfaData.getAvailList[i]).fltData;
+
+						if(theFlt.airlineCode == 'JL')
+							 pendingAvailFltsJAL.addItem(theFlt);
+						else pendingAvailFlts.addItem(theFlt);
 						}
 					
-					jalFlightCount=jalFlightslist.length;
-					
-					totalPendingAvail= flightsForAvail.length;
+					jalFlightCount = pendingAvailFltsJAL.length;
+					totalPendingAvail = pendingAvailFlts.length;
+						
 					pendingAvailDone = 0;
-					
-					stillPending.text = String(totalPendingAvail);
-					totalFlights= flightsForAvail.length;
+					totalFlights = jalFlightCount + totalPendingAvail;
+					stillPending.text = String(totalFlights);
 					}
-				
+					
 				if(numToSend > totalFlights)
 					numToSend = totalFlights;
-				
-				while(numToSend > 0)
-				{	
-					isAvailRunning = true;
 					
-					if(pendingAvailFlts!=null)
+				while(numToSend > 0)
 					{
-						if(pendingAvailFlts.length>0 && isGetAvailCancelled==false && totalFlights!=0)
+					isAvailRunning = true;
+						
+					if(pendingAvailFlts.length > 0)
 						{
-							getSingleFlightAvailability(pendingAvailFlts.getItemAt(0) as BasicFlightDataVO);
+						if(isGetAvailCancelled == false && totalFlights != 0)
+							{
+							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliy').send(pendingAvailFlts.getItemAt(0) as BasicFlightDataVO);
 							pendingAvailFlts.removeItemAt(0);
-							
+								
 							++requestSent;
 							--totalFlights;
-							--numToSend;
+							}
 						}
-						
-						if(pendingAvailFlts.length==0)
+					else if(pendingAvailFltsJAL.length > 0)
 						{
-							if(jalFlightslist!=null && isGetAvailCancelled==false && totalFlights!=0)
-							{ 
-
-								if(jalFlightslist.length >0)
-								{
-									getMulitipleFlightAvailability(jalFlightslist);
-									requestSent= requestSent+jalFlightslist.length;
-									totalFlights= totalFlights-jalFlightslist.length;
-									jalFlightslist.removeAll();
-									--numToSend;
-								}
-								
-							}
-							else
-								--numToSend;
-						}
-
-					}
-					else
-					{
-						if(jalFlightslist!=null && isGetAvailCancelled==false && totalFlights!=0)
-						{ 
-							if(jalFlightslist.length >0)
+						if(isGetAvailCancelled == false && totalFlights != 0)
 							{
-								getMulitipleFlightAvailability(jalFlightslist);
-								requestSent= requestSent+jalFlightslist.length;
-								totalFlights= totalFlights-jalFlightslist.length;
-								jalFlightslist.removeAll();
-								--numToSend;
+							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(pendingAvailFltsJAL);
+
+							requestSent += pendingAvailFltsJAL.length;
+							totalFlights -= pendingAvailFltsJAL.length;
+
+							pendingAvailFltsJAL.removeAll();
 							}
-							
 						}
-						else
-							--numToSend;
 
+					--numToSend;
 					}
-						
-				}
-			}
-
-			private function computeDistance(val:Number):String
-			{
-				var km:int = (val / .621371192);
-				
-				return("Miles: " + val.toString() + "; Km: " + km.toString());
-			}
-			
-			private function getMulitipleFlightAvailability(flightList:ArrayCollection):void
-			{
-				if(flightList.length>0)
-					connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(flightList);
-			}
-			
-			private function getSingleFlightAvailability(basicFlightDataVO:BasicFlightDataVO):void
-			{
-				connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliy').send(basicFlightDataVO);
 			}
 			
 			public var seats:String;
@@ -569,21 +558,21 @@
 					
 					if(!isNaN(_availabilityVO.classAvailJ))
 					{
-						jClass = _availabilityVO.classAvailJ.toString();//(_availabilityVO.classAvailJ >= 0) ? _availabilityVO.classAvailJ.toString() : "0";
+						jClass = _availabilityVO.classAvailJ.toString();
 						seatAvail += (_availabilityVO.classAvailJ >= 0) ? _availabilityVO.classAvailJ : 0;
 						availData += "J" + jClass + "  ";
 					}
 					
 					if(!isNaN(_availabilityVO.classAvailW))
 					{
-						wClass = _availabilityVO.classAvailW.toString();//(_availabilityVO.classAvailW >= 0) ? _availabilityVO.classAvailW.toString() : "0";
+						wClass = _availabilityVO.classAvailW.toString();
 						seatAvail += (_availabilityVO.classAvailW >= 0) ? _availabilityVO.classAvailW : 0;
 						availData += "W" + wClass + "  ";
 					}
 					
 					if(!isNaN(_availabilityVO.classAvailM))
 					{
-						mClass = _availabilityVO.classAvailM.toString();//(_availabilityVO.classAvailM >= 0) ? _availabilityVO.classAvailM.toString() : "0";
+						mClass = _availabilityVO.classAvailM.toString();
 						seatAvail += (_availabilityVO.classAvailM >= 0) ? _availabilityVO.classAvailM : 0;
 						availData += "M" + mClass + "  ";
 					}
@@ -690,9 +679,9 @@
 							var routeID:int= Number(d[0]);
 							var index:int= Number(d[1]);
 
-							for(var k:int=0;k<routeData.length;k++)
+							for(var k:int=0;k<routeList.length;k++)
 								{
-								var route:RouteVO= routeData[k] as RouteVO;
+								var route:RouteVO= routeList[k] as RouteVO;
 								var flightLegs:Array= route.fltLegs;
 
 								if(routeID != route.routeID)
@@ -719,12 +708,8 @@
 									}
 								
 								if(setTotalAvail==true && totalAvail!=null)	 
-									{ 
-									route.totalSeats='';
-									route.totalSeats=String(totalAvail);
-									}
-								else
-									route.totalSeats='';
+									route.totalSeats = String(totalAvail);
+								else route.totalSeats = "";
 								}
 							}
 						}
@@ -740,7 +725,7 @@
 				stillPending.text = String(totalPendingAvail - pendingAvailDone);
 				
 				if((pendingAvailDone % 10) == 0 || requestSent == 0)
-					routeData.refresh();
+					routeList.refresh();
 				
 				if(!isGetAvailCancelled)
 					getAvailForPendingFlights(1);
@@ -761,7 +746,7 @@
 				stillPending.text = String(totalPendingAvail - pendingAvailDone);
 				
 				if((pendingAvailDone % 10) == 0 || requestSent == 0)
-					routeData.refresh();
+					routeList.refresh();
 				
 				if(!isGetAvailCancelled)
 					getAvailForPendingFlights(1);
@@ -783,7 +768,7 @@
 				stillPending.text = String(totalPendingAvail - pendingAvailDone);
 				
 				if((pendingAvailDone % 10) == 0 || requestSent == 0)
-					routeData.refresh();
+					routeList.refresh();
 				
 				if(!isGetAvailCancelled)
 					getAvailForPendingFlights(1);
@@ -1014,8 +999,8 @@
 
 				filterAirlineCodes.sort();
 				
-				routeData.filterFunction = startFiltering;
-				routeData.refresh();
+				routeList.filterFunction = startFiltering;
+				routeList.refresh();
 			}
 		
 			public function startGettingAvailButton():void
@@ -1087,7 +1072,7 @@
 					verticalScrollPolicy="auto">
 			<s:VGroup height="100%" includeInLayout="true">
 				
-				<s:SkinnableContainer id="Availprogressbox" width="260" horizontalCenter="0" skinClass="skin.AvailabilityBoxSkin">
+				<s:SkinnableContainer id="Availprogressbox" width="220" horizontalCenter="0" skinClass="skin.AvailabilityBoxSkin">
 					<s:layout>
 						<s:VerticalLayout/>
 					</s:layout>
@@ -1108,7 +1093,7 @@
 								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="{(isAvailRunning ? 'Running...' : 'Stopped')}"/>
 							</s:HGroup>
 							<s:HGroup includeInLayout="true">
-								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="Flights Pending Availability: "/>
+								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="Fights Pending Avail: "/>
 								<s:Label id="stillPending" color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"/>
 							</s:HGroup>
 							<s:Label visible="{isGetAvailCancelled}" color="#B40000" text="CANCELLING...One Moment..."/>
@@ -1126,7 +1111,7 @@
 					</s:BorderContainer>
 				</s:SkinnableContainer>
 
-				<s:SkinnableContainer width="260" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
+				<s:SkinnableContainer width="220" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
 					<s:VGroup width="100%">
 						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Last Search:"/>
 						<s:Spacer/>
@@ -1174,7 +1159,7 @@
 					</s:VGroup>
 				</s:SkinnableContainer>
 				
-				<s:SkinnableContainer enabled="{!isAvailRunning}" width="260" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
+				<s:SkinnableContainer enabled="{!isAvailRunning}" width="220" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
 					<s:VGroup width="100%">
 						
 						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Filter Results:"/>
@@ -1228,23 +1213,15 @@
 			</s:VGroup>
 		</s:Scroller>
 
-		
-		<s:DataGrid id="displayresults" width="100%" height="100%" dataProvider="{routeData}"
+		<s:DataGrid id="displayresults" width="100%" height="100%" dataProvider="{routeList}"
 					variableRowHeight="true" skinClass="skin.DataGridSkin">
-
 			<s:columns>
 				<s:ArrayList>
-					<s:GridColumn dataField="rank" headerText="--"
-								  itemRenderer="itemrenderers.ResultGridItemRenderer" sortable="false" width="1500"/>
+					<s:GridColumn dataField="rank" headerText="--" itemRenderer="itemrenderers.ResultGridItemRenderer" sortable="false" width="1500"/>
 					<s:GridColumn dataField="rowIndex" itemRenderer="itemrenderers.LineCountItemRenderer" sortable="false" width="35"/>
-								  
 				</s:ArrayList>
 			</s:columns>
-
 		</s:DataGrid>
 		
-		
 	</s:HGroup>
-	
-	
 </s:Application>

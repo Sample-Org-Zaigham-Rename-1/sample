@@ -7,7 +7,9 @@ package com.aa.rpt.apps.owr.vo
 	{	
 		public var routeID:int;
 		public var fltLegs:Array;
-		public var totalSeats:String;
+		public var mctConx1:String;
+		public var mctConx2:String;
 		
+		public var totalSeats:String;
 	}
 }

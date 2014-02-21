@@ -26,7 +26,7 @@
 	</fx:Metadata>
 
 	<s:layout>
-		<s:VerticalLayout/>
+		<s:VerticalLayout paddingTop="0" paddingBottom="0"/>
 	</s:layout>
 	
 	<fx:Script>
@@ -270,12 +270,12 @@
 		]]>
 	</fx:Script>
 	
-	<mx:TabNavigator id="tab_nav" width="552" change="{populateControl()}" includeInLayout="true">
+	<mx:TabNavigator paddingLeft="0" id="tab_nav" width="450" change="{populateControl()}" includeInLayout="true">
 		<view:Market id="market" label="Search By Market"/>
 		<view:Flight id="flight" label="Search By Flight"/>
 	</mx:TabNavigator>
 	
-	<s:HGroup includeInLayout="true" width="100%" verticalAlign="top">
+	<s:HGroup includeInLayout="true" width="100%"  verticalAlign="middle">
 		<s:Spacer width="5"/>
 		<s:Button label="Search" click="{Message.text=''; searchButton(event)}"/>
 		<s:Spacer width="5"/>

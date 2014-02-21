@@ -112,9 +112,9 @@
 		<s:RadioButtonGroup id="milesRBG" itemClick="milesRBG_itemClickHandler(event)"/>
 	</fx:Declarations>
 	
-	<s:Form width="497" fontSize="14">
+	<s:Form fontSize="14">
 		<s:layout>
-			<s:FormLayout gap="-5" paddingLeft="-5" horizontalAlign="left" />
+			<s:FormLayout gap="-15" paddingLeft="-25" horizontalAlign="left" paddingTop="-20" paddingBottom="-20"/>
 		</s:layout>  
 
 		<s:FormItem  label="Origin and Destination:" textAlign="right">

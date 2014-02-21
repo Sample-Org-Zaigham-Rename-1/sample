@@ -16,12 +16,13 @@ package com.aa.rpt.apps.owr.vo
 		public var avoidStations:String;
 		public var validAirlines:String;
 		public var numConx:Number;
-		public var suppressAvail:Boolean;
 		
 		public var fltNum:String;
 		public var fltDepSta:String;
 		public var fltArvSta:String;
 		public var fltDate:Date;
 		public var fltAirline:String;
+		
+		public var suppressAvail:Boolean;
 	}
 }
