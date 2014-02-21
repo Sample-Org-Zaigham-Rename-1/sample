@@ -7,15 +7,11 @@
 		<![CDATA[
 			override public function prepare(hasBeenRecycled:Boolean):void {
 				
-				if(data==null)
-				{
+				if(data == null)
 					return;
-				}
 
-				if((rowIndex+1)%2 ==0)
-					sc.color= 0xFFFFF0;
-				else
-					sc.color= 0xADADAD;
+				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xFFFFE0);
+				
 				lblData.text = String(rowIndex+1);
 			}
 		]]>
