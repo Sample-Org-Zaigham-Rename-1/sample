@@ -10,7 +10,7 @@
 				if(data == null)
 					return;
 
-				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xFFFFE0);
+				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xFFFFD0);
 				
 				lblData.text = String(rowIndex+1);
 			}
@@ -23,6 +23,8 @@
 		</s:fill>
 	</s:Rect>
 	
-	<s:Label id="lblData" top="9" left="2" textAlign="right" fontSize="10"/>
+	<s:HGroup height="100%" verticalAlign="top" paddingTop="5" paddingLeft="2">
+		<s:Label id="lblData" fontSize="9"/>
+	</s:HGroup>
 	
 </s:GridItemRenderer>

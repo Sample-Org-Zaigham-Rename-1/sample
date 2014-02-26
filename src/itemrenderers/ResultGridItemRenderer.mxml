@@ -15,9 +15,9 @@
 			import mx.utils.StringUtil;
 			
 			
-			[Embed(source="images/pending.jpg")] static private var pending:Class;
+			[Embed(source="images/pending.png")] static private var pending:Class;
 			[Embed(source="images/available.png")] static private var available:Class;
-			[Embed(source="images/unavailable.jpg")] static private var unavailable:Class;
+			[Embed(source="images/unavailable.png")] static private var unavailable:Class;
 			[Embed(source="images/aa.png")] static private var aaLogo:Class;
 //			[Embed(source="images/ae.png")] static private var aeLogo:Class;
 			[Embed(source="images/ba.png")] static private var baLogo:Class;
@@ -78,7 +78,7 @@
 					return;
 				
 //				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xADADAD);
-				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xFFFFE0);
+				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xFFFFD0);
 			}
 			
 			override public function set data(value:Object):void
@@ -127,7 +127,7 @@
 				if(fltLegs == null || fltLegs.length <= 0)
 					return;
 					
-				if(route.totalSeats != null && StringUtil.trim(route.totalSeats) != '')
+				if(route.totalSeats != null && route.totalSeats != '')
 					{
 					count = route.totalSeats;
 						
@@ -162,7 +162,7 @@
 							arvTimeFlt1.text=fltVO1.arrivalTime.substr(0,2) + "/" + fltVO1.arrivalTime.substr(9,4);
 							
 							if(route.mctConx1 != null)
-								 mctFlt1.text = "MCT " + route.mctConx1;
+								 mctFlt1.text = "mct " + route.mctConx1;
 								
 							if(fltVO1.cabinData)
 								{
@@ -190,7 +190,7 @@
 							arvTimeFlt2.text=fltVO2.arrivalTime.substr(0,2) + "/" + fltVO2.arrivalTime.substr(9,4);
 							
 							if(route.mctConx2 != null)
-								 mctFlt2.text = "MCT " + route.mctConx2;
+								 mctFlt2.text = "mct " + route.mctConx2;
 								
 							var leg1ArvTime:Date= new Date(Number(fltVO1.arrivalTime.substr(5,4)),
 								DateUtil.getMonth(fltVO1.arrivalTime.substr(2,3)),
@@ -270,11 +270,12 @@
 	</s:Rect>
 	
 	<s:HGroup height="100%" paddingTop="5" paddingLeft="1" paddingBottom="5" paddingRight="1">
-		<s:Image source="{statusImg}" toolTip="{tip}"/>
-		<s:Label textAlign="right" text="{count}" color="#0000FF" width="25" fontWeight="bold"/>
+		<s:VGroup>
+			<s:Image source="{statusImg}" toolTip="{tip}"/>
+			<s:Label  textAlign="center" text="{count}" color="#0000FF" width="32" fontWeight="bold" toolTip="{tip}"/>
+		</s:VGroup>
 		
 		<s:Image id="leg1airline"/>
-		
 		
 		<s:VGroup gap="5">
 			<s:HGroup>
@@ -288,6 +289,7 @@
 				<s:Label id="arvTimeFlt1"  toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
 			</s:HGroup>
 		</s:VGroup>
+		
 		<s:VGroup>
 			<s:Spacer height="9"/>	
 			<s:Label id="cabinData"
@@ -322,6 +324,7 @@
 				<s:Label id="arvTimeFlt2" toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
 			</s:HGroup>
 		</s:VGroup>
+		
 		<s:VGroup>
 			<s:Spacer height="9"/>	
 			<s:Label id="cabinData1"
@@ -357,6 +360,7 @@
 				<s:Label id="arvTimeFlt3" toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
 			</s:HGroup>
 		</s:VGroup>
+		
 		<s:VGroup>
 			<s:Spacer height="9"/>	
 			<s:Label id="cabinData2"
