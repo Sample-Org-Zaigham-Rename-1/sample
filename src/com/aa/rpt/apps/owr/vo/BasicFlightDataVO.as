@@ -4,6 +4,7 @@ package com.aa.rpt.apps.owr.vo
     [RemoteClass(alias="com.aa.rpt.connectionbuilder.vo.BasicFlightDataVO")]
 	public class BasicFlightDataVO
 	{
+		public var clientIndex:int;
 		public var flightNumber:String;
 		public var depSta:String;
 		public var arvSta:String;

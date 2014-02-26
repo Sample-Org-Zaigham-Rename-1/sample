@@ -1,7 +1,5 @@
 package com.aa.rpt.apps.owr.vo
 {
-	//import com.aa.rpt.apps.owr.utils.HashMap;
-	
 	import mx.collections.ArrayCollection;
 	
 	[Bindable]

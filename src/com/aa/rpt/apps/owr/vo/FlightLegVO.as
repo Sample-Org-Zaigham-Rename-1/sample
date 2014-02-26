@@ -14,8 +14,8 @@ package com.aa.rpt.apps.owr.vo
 		public var scheduledTimeInGMT:String;
 		public var miles:String;
 		
-		public var seats:String;
-		public var cabinData:String;
+		public var seats:int;
+		public var cabinData:String = null;
 		
 		public function toString():String{
 			return airline+' '+flightNumber+' '+departureStation+' '+arrivalStation;

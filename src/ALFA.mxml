@@ -70,39 +70,34 @@
 			import mx.managers.PopUpManager;
 			import mx.rpc.events.FaultEvent;
 			import mx.rpc.events.ResultEvent;
-			import mx.utils.StringUtil;
 			import mx.utils.URLUtil;
 			
 			import spark.components.BorderContainer;
 			import spark.components.Label;
 			
 			[Embed(source="images/rarrow.png")] 
-			[Bindable]static private var rArrow:Class;
+				[Bindable]static private var rArrow:Class;
 			[Embed(source="images/200px-Oneworld_logo_svg.png")]
-			[Bindable]static private var applogo:Class;
+				[Bindable]static private var applogo:Class;
 			
-			[Bindable] public var alfaData:AlfaDataVO;
 			[Bindable] public var routeList:ArrayCollection;
+			
+			public var uniqueFltsList:ArrayCollection;
 			
 			private var searchScreen:SearchScreen;
 			private var curParms:SearchScreenVO = null;
 			private var mktParms:SearchScreenVO = null;
 			private var fltParms:SearchScreenVO = null;
 			
-			[Bindable] private var isGetAvailCancelled:Boolean = false;
+			[Bindable] private var cancelGetAvail:Boolean = false;
 			[Bindable] private var isAvailRunning:Boolean = false;
+			[Bindable] private var availComplete:Boolean = true;
 
-			private var fltsPendingAvail:ArrayCollection = new ArrayCollection();
-			private var pendingAvailFlts:ArrayCollection = new ArrayCollection();
-			private var pendingAvailFltsJAL:ArrayCollection = new ArrayCollection();
-			
-			private var totalPendingAvail:int = 0;
-			private var pendingAvailDone:int = 0;
-			private var requestSent:int = 0;
-			private var totalFlights:Number = 0;
-			private var jalFlightCount:Number = 0;
-			
+			[Bindable] private var fltsPendingAvail:ArrayCollection = new ArrayCollection();
+
 			private var listTimeStamp:Date;
+			
+			protected var filterAirlineCodes:Array;
 
 			//
 			//////////////////////////////////////////////
@@ -218,24 +213,18 @@
 
 					if(fltParms.fltDepSta.length == 3 && fltParms.fltArvSta.length == 3 )
 						{
+						reqParms.flightNumber = Number(fltParms.fltNum);
+						reqParms.airlineCodes = fltParms.fltAirline;
+						reqParms.minDate = ddmmmyyyy.format(fltParms.fltDate);
 						reqParms.depSta = fltParms.fltDepSta;
 						reqParms.arvSta = fltParms.fltArvSta;
-						reqParms.minDate = ddmmmyyyyhhmm.format(fltParms.fltDate);
-						reqParms.maxDate = ddmmmyyyyhhmm.format(new Date(fltParms.fltDate.fullYear, fltParms.fltDate.month, fltParms.fltDate.date + 1, fltParms.fltDate.hours, fltParms.fltDate.minutes));
-						reqParms.domesticconnectTime = '10';
-						reqParms.internationalconnectTime = '10';
-						reqParms.miles = null;
-						reqParms.legs = '3';
-						reqParms.avoidStations = null;
-						reqParms.airlineCodes = fltParms.fltAirline;
-						reqParms.flightNumber = Number(fltParms.fltNum);
 
 						connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(reqParms);
 						}
 					else{
-						var flightDateString:String = ddmmmyyyy.format(fltParms.fltDate);
+						var fltDate:String = ddmmmyyyy.format(fltParms.fltDate);
 
-						connectionAdvisorRemoteObject.getOperation('getConnectionsByFlight').send(fltParms.fltNum, fltParms.fltAirline, flightDateString);
+						connectionAdvisorRemoteObject.getOperation('getConnectionsByFlight').send(fltParms.fltNum, fltParms.fltAirline, fltDate);
 						}
 					}
 			}
@@ -290,16 +279,15 @@
 				PopUpManager.removePopUp(searchScreen);
 				
 				listTimeStamp = new Date();
-				isGetAvailCancelled = false;
-				isAvailRunning = false;
-				totalPendingAvail = 0;
-				
-				alfaData = alfaDataVO;
 				
 				if(routeList != null)
 					routeList.removeAll();
 				
+				if(uniqueFltsList != null)
+					uniqueFltsList.removeAll();
+				
 				routeList = alfaDataVO.routeList;
+				uniqueFltsList = alfaDataVO.getAvailList;
 				
 				for(var i:int = 1; i <= 9; i++)
 					{
@@ -395,243 +383,74 @@
 				ftwostops.selected = false;
 				fAvl.selected = false;
 				
-				getAvailForPendingFlights((curParms.suppressAvail ? 0 : 5), true);
+				getAvailForPendingFlights(true);
 			}
 
 			// NEW NEW
 			///////////////////////////////////////////////////////////
-			private function getAvailForPendingFlightsNEW(firstTime:Boolean = false):void
+			private function getAvailForPendingFlights(firstTime:Boolean = false):void
 			{
+				var theFlt:BasicFlightDataVO;
+				
 				if(firstTime)
 					{
 					fltsPendingAvail.removeAll();
 						
-					for(var i:int = 0; i < alfaData.getAvailList.length; i++)
-						fltsPendingAvail.addItem(GetAvailVO(alfaData.getAvailList[i]).fltData);
-						
+					for(var i:int = 0; i < uniqueFltsList.length; i++)
+						{
+						theFlt = GetAvailVO(uniqueFltsList[i]).fltData;
+						theFlt.clientIndex = i;
+						fltsPendingAvail.addItem(theFlt);
+						}
+					
+					availComplete = cancelGetAvail = isAvailRunning = false;
+					
 					stillPending.text = String(fltsPendingAvail.length);
 					
 					if(curParms.suppressAvail)
 						return;
 					}
-				
-/***				
-				if(numToSend > totalFlights)
-					numToSend = totalFlights;
 
-				while(numToSend > 0)
+				if(cancelGetAvail || fltsPendingAvail.length == 0)
 					{
-					isAvailRunning = true;
+					cancelGetAvail = isAvailRunning = false;
+					
+					if(fltsPendingAvail.length == 0)
+						availComplete = true;
+					
+					return;
+					}
+				
+				isAvailRunning = true;
+				
+				var fltsToGetAvail:ArrayCollection = new ArrayCollection();
+				
+				for(var curIdx:int = 0; curIdx < fltsPendingAvail.length; )
+					{
+					theFlt = fltsPendingAvail.getItemAt(curIdx) as BasicFlightDataVO;
+					
+					if(theFlt.airlineCode == 'JL')
+						++curIdx;
+					else{
+						fltsToGetAvail.addItem(theFlt);
+						fltsPendingAvail.removeItemAt(curIdx);
 						
-					if(pendingAvailFlts.length > 0)
-						{
-						if(isGetAvailCancelled == false && totalFlights != 0)
-							{
-							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliy').send(pendingAvailFlts.getItemAt(0) as BasicFlightDataVO);
-							pendingAvailFlts.removeItemAt(0);
-								
-							++requestSent;
-							--totalFlights;
-							}
+						if(fltsToGetAvail.length == 100)
+							break;
 						}
-					else if(pendingAvailFltsJAL.length > 0)
-						{
-						if(isGetAvailCancelled == false && totalFlights != 0)
-							{
-							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(pendingAvailFltsJAL);
-								
-							requestSent += pendingAvailFltsJAL.length;
-							totalFlights -= pendingAvailFltsJAL.length;
-								
-							pendingAvailFltsJAL.removeAll();
-							}
-						}
-						
-					--numToSend;
 					}
-***/ 
-			}
-			
-			//
-			///////////////////////////////////////////////////////////
-			private function getAvailForPendingFlights(numToSend:int, firstTime:Boolean = false):void
-			{
-				if(firstTime)
-					{
-					pendingAvailFltsJAL.removeAll();
-					pendingAvailFlts.removeAll();
-					
-					for(var i:int = 0; i < alfaData.getAvailList.length; i++)
-						{
-						var theFlt:BasicFlightDataVO = GetAvailVO(alfaData.getAvailList[i]).fltData;
-
-						if(theFlt.airlineCode == 'JL')
-							 pendingAvailFltsJAL.addItem(theFlt);
-						else pendingAvailFlts.addItem(theFlt);
-						}
-					
-					jalFlightCount = pendingAvailFltsJAL.length;
-					totalPendingAvail = pendingAvailFlts.length;
-						
-					pendingAvailDone = 0;
-					totalFlights = jalFlightCount + totalPendingAvail;
-					stillPending.text = String(totalFlights);
-					}
-					
-				if(numToSend > totalFlights)
-					numToSend = totalFlights;
-					
-				while(numToSend > 0)
-					{
-					isAvailRunning = true;
-						
-					if(pendingAvailFlts.length > 0)
-						{
-						if(isGetAvailCancelled == false && totalFlights != 0)
-							{
-							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliy').send(pendingAvailFlts.getItemAt(0) as BasicFlightDataVO);
-							pendingAvailFlts.removeItemAt(0);
-								
-							++requestSent;
-							--totalFlights;
-							}
-						}
-					else if(pendingAvailFltsJAL.length > 0)
-						{
-						if(isGetAvailCancelled == false && totalFlights != 0)
-							{
-							connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(pendingAvailFltsJAL);
-
-							requestSent += pendingAvailFltsJAL.length;
-							totalFlights -= pendingAvailFltsJAL.length;
-
-							pendingAvailFltsJAL.removeAll();
-							}
-						}
-
-					--numToSend;
-					}
-			}
-			
-			public var seats:String;
-			
-			
-			public var cabinData:String;
-			
-			private function assignSeats(_availabilityVO:AvailabilityVO):void
-			{
-				if(_availabilityVO)
-				{
-					var availData:String = "";
-					var seatAvail:Number = 0;
-				    var fClass:String;
-					var cClass:String;
-					var yClass:String;
-					var jClass:String;
-					var mClass:String;
-					var wClass:String;
-					var eClass:String;
-					
-					
-					if(!isNaN(_availabilityVO.classAvailF))
-					{
-						fClass = (_availabilityVO.classAvailF >= 0) ? _availabilityVO.classAvailF.toString() : "0";
-						seatAvail += (_availabilityVO.classAvailF >= 0) ? _availabilityVO.classAvailF : 0;
-						availData += "F" + fClass + "  ";
-						
-					}
-					
-					if(!isNaN(_availabilityVO.classAvailC))
-					{
-						cClass = (_availabilityVO.classAvailC >= 0) ? _availabilityVO.classAvailC.toString() : "0";
-						seatAvail += (_availabilityVO.classAvailC >= 0) ? _availabilityVO.classAvailC : 0;
-						availData += "C" + cClass + "  ";
-					}
-					
-					if(!isNaN(_availabilityVO.classAvailY))
-					{
-						yClass = (_availabilityVO.classAvailY >= 0) ? _availabilityVO.classAvailY.toString() : "0";
-						seatAvail += (_availabilityVO.classAvailY >= 0) ? _availabilityVO.classAvailY : 0;
-						availData += "Y" + yClass + "  ";
-					}
-					
-					
-					if(!isNaN(_availabilityVO.classAvailJ))
-					{
-						jClass = _availabilityVO.classAvailJ.toString();
-						seatAvail += (_availabilityVO.classAvailJ >= 0) ? _availabilityVO.classAvailJ : 0;
-						availData += "J" + jClass + "  ";
-					}
-					
-					if(!isNaN(_availabilityVO.classAvailW))
-					{
-						wClass = _availabilityVO.classAvailW.toString();
-						seatAvail += (_availabilityVO.classAvailW >= 0) ? _availabilityVO.classAvailW : 0;
-						availData += "W" + wClass + "  ";
-					}
-					
-					if(!isNaN(_availabilityVO.classAvailM))
-					{
-						mClass = _availabilityVO.classAvailM.toString();
-						seatAvail += (_availabilityVO.classAvailM >= 0) ? _availabilityVO.classAvailM : 0;
-						availData += "M" + mClass + "  ";
-					}
-					
-					
-					
-					if(!isNaN(_availabilityVO.classAvailE))
-					{
-						eClass = _availabilityVO.classAvailE.toString();
-						seatAvail += _availabilityVO.classAvailE;
-						availData += "E" + eClass + "  ";
-					}
-					
-					
-					if(!isNaN(_availabilityVO.classAvailX))
-						availData += "X" + ((_availabilityVO.classAvailX >= 0) ? _availabilityVO.classAvailF.toString() : "0");
-					
-					seats='';
-					seats = String(seatAvail);
-					
-					cabinData='';
-					cabinData= availData;
-
-				}
 				
-			}
-			
-			
-			private function calculateTotalAvailability(route:RouteVO):String
-			{
-				var doAvailCount:int=-2;
-				var flightseats:int=1000;
-				for(var m:int=0;m<route.fltLegs.length;m++)
-				{
-					var flightLeg:FlightLegVO=route.fltLegs[m] as FlightLegVO;
-					if(flightLeg.cabinData==''|| flightLeg.cabinData==null)
+				if(fltsToGetAvail.length > 0)
 					{
-						doAvailCount=0;
+//					mx.controls.Alert.show("Sending NON JAL: " + fltsToGetAvail.length + ";  Left: " + fltsPendingAvail.length);
+					connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsToGetAvail);
+					fltsToGetAvail.removeAll();
 					}
-					else
-					{
-						doAvailCount=1;
-						if(flightseats>Number(flightLeg.seats))
-							flightseats=Number(flightLeg.seats);
-							
+				else{
+//					mx.controls.Alert.show("Sending JAL: " + fltsPendingAvail.length);
+					connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsPendingAvail);
+					fltsPendingAvail.removeAll();
 					}
-						
-					
-				}
-				
-				if(doAvailCount==1)
-				{
-					return String(flightseats);
-				}
-				
-				else
-					return null;
-				
-				
 			}
 			
 			private function getCabinAvailabiliyMultiResultHandler(resultEvent:ResultEvent):void
@@ -639,345 +458,322 @@
 				var availablityList:ArrayCollection = resultEvent.result as ArrayCollection;
 				
 				for(var i:int = 0; i < availablityList.length; i++)
-				{
+					{
 					var faVO:FlightAvailabilityVO = availablityList[i] as FlightAvailabilityVO;
 					
-					populateAvailability(faVO);
-					
-					if(faVO.status != null && faVO.status.length > 0)
-						break;
-				}
-			}
-			
-			 private function getCabinAvailabiliyResultHandler(resultEvent:ResultEvent):void
-			{
-				 var faVO:FlightAvailabilityVO = resultEvent.result as FlightAvailabilityVO;
-				 
-				 populateAvailability(faVO);
-			}
-			
-			private function populateAvailability(faVO:FlightAvailabilityVO):void
-			{
-				if(faVO.status == null || faVO.status == "")
-					{
-					var key:String = faVO.flightNumber + faVO.depSta + faVO.arvSta + faVO.flightDate;
-						
-					for(var h:int = 0; h < alfaData.getAvailList.length; h++)
+					if(i == 0 && faVO.status != null && faVO.status.length > 0)
 						{
-						var availObj:GetAvailVO = alfaData.getAvailList[h] as GetAvailVO;
-						var flightData:BasicFlightDataVO= availObj.fltData;
-						
-						var flightKey:String = flightData.flightNumber + flightData.depSta + flightData.arvSta + flightData.flightDate;
-						
-						if(key != flightKey)
-							continue;
-
-						for(var v:int=0;v<availObj.fltLocation.length;v++)
-							{
-							var flightLocation:String=availObj.fltLocation[v];
-							var d:Array= flightLocation.split(",");
-							var routeID:int= Number(d[0]);
-							var index:int= Number(d[1]);
-
-							for(var k:int=0;k<routeList.length;k++)
-								{
-								var route:RouteVO= routeList[k] as RouteVO;
-								var flightLegs:Array= route.fltLegs;
-
-								if(routeID != route.routeID)
-									continue;
-
-								var flightLeg:FlightLegVO=flightLegs[index];
-								var availabilityVO:AvailabilityVO=faVO.availabilityVO;
-								if(availabilityVO)
-									{
-									assignSeats(availabilityVO);
-									flightLeg.seats=seats;
-									flightLeg.cabinData=cabinData; 
-									}
-								
-								var totalAvail:String=calculateTotalAvailability(route);
-								
-								var setTotalAvail:Boolean=true;
-								
-								for (var l:int=0;l<flightLegs.length;l++)
-									{
-									var flightleg:FlightLegVO= flightLegs[l];
-									if(flightleg.cabinData==''|| flightleg.cabinData==null||StringUtil.trim(flightleg.cabinData)=='')
-										setTotalAvail=false;
-									}
-								
-								if(setTotalAvail==true && totalAvail!=null)	 
-									route.totalSeats = String(totalAvail);
-								else route.totalSeats = "";
-								}
-							}
+						cancelGetAvail = true;
+						Alert.show(faVO.status);
+						break;
 						}
+						
+					populateAvailability(faVO);
 					}
+				
+				stillPending.text = String(fltsPendingAvail.length);
+				routeList.refresh();
+				getAvailForPendingFlights();
+			}
+			
+			private function getCabinAvailabiliyMultiFaultHandler(faultEvent:FaultEvent):void
+			{
+				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
+				
+				stillPending.text = String(fltsPendingAvail.length);
+				
+				cancelGetAvail = true;
+				getAvailForPendingFlights();
+			}
+			
+			private function getCabinAvailabiliyResultHandler(resultEvent:ResultEvent):void
+			{
+				var faVO:FlightAvailabilityVO = resultEvent.result as FlightAvailabilityVO;
+				 
+				if(faVO.status == null || faVO.status == "")
+					populateAvailability(faVO);
 				else{
-					isGetAvailCancelled = true;
-					Alert.show(faVO.status);
-					}
-					
-				++pendingAvailDone;
-				--requestSent;
+					cancelGetAvail = true;
+				 	Alert.show(faVO.status);
+				 	}
 				
-				stillPending.text = String(totalPendingAvail - pendingAvailDone);
-				
-				if((pendingAvailDone % 10) == 0 || requestSent == 0)
-					routeList.refresh();
-				
-				if(!isGetAvailCancelled)
-					getAvailForPendingFlights(1);
-				else if(requestSent == 0)
-					isGetAvailCancelled = false; 
-				
-				if(requestSent == 0)
-					isAvailRunning = false;
+				stillPending.text = String(fltsPendingAvail.length);
+				routeList.refresh();
+				getAvailForPendingFlights();
 			}
 			
 			private function getCabinAvailabiliyFaultHandler(faultEvent:FaultEvent):void
 			{
 				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
 				
-				++pendingAvailDone;
-				--requestSent;
+				stillPending.text = String(fltsPendingAvail.length);
 				
-				stillPending.text = String(totalPendingAvail - pendingAvailDone);
-				
-				if((pendingAvailDone % 10) == 0 || requestSent == 0)
-					routeList.refresh();
-				
-				if(!isGetAvailCancelled)
-					getAvailForPendingFlights(1);
-				else if(requestSent == 0)
-					isGetAvailCancelled = false;
-				
-				if(requestSent == 0)
-					isAvailRunning = false;
+				cancelGetAvail = true;
+				getAvailForPendingFlights();
 			}
 			
-			
-			private function getCabinAvailabiliyMultiFaultHandler(faultEvent:FaultEvent):void
+			private function populateAvailability(faVO:FlightAvailabilityVO):void
 			{
-				Alert.show(faultEvent.fault.faultCode + faultEvent.fault.faultDetail + faultEvent.fault.faultString);
+				var fltLocation:Array = GetAvailVO(uniqueFltsList.getItemAt(faVO.clientIndex)).fltLocation;
+
+				for(var i:int = 0; i < fltLocation.length; i++)
+					{
+					var rowCol:Array = String(fltLocation[i]).split(","); 
+					var route:RouteVO = RouteVO(routeList.getItemAt(int(rowCol[0])));   	// rowCol[0] is the row index
+					
+					if(faVO.availabilityVO != null)
+						assignSeats(faVO.availabilityVO, route.fltLegs[int(rowCol[1])]);	// rowCol[1] is the leg index
+
+					route.totalSeats = calculateTotalAvailability(route);
+					}
+			}
+			
+			private function assignSeats(avo:AvailabilityVO, flightLeg:FlightLegVO):void
+			{
+				var cabinData:String = '';
+				var seatAvail:Number = 0;
+					
+				if(!isNaN(avo.classAvailF))
+				{
+					seatAvail += avo.classAvailF;
+					cabinData += "F" + String(avo.classAvailF) + ",";
+				}
 				
-				++pendingAvailDone;
-				requestSent = requestSent-jalFlightCount;
+				if(!isNaN(avo.classAvailC))
+				{
+					seatAvail += avo.classAvailC;
+					cabinData += "C" + String(avo.classAvailC) + ",";
+				}
 				
-				stillPending.text = String(totalPendingAvail - pendingAvailDone);
+				if(!isNaN(avo.classAvailY))
+				{
+					seatAvail += avo.classAvailY;
+					cabinData += "Y" + String(avo.classAvailY) + ",";
+				}
 				
-				if((pendingAvailDone % 10) == 0 || requestSent == 0)
-					routeList.refresh();
+				if(!isNaN(avo.classAvailJ))
+				{
+					seatAvail += avo.classAvailJ;
+					cabinData += "J" + String(avo.classAvailJ) + ",";
+				}
 				
-				if(!isGetAvailCancelled)
-					getAvailForPendingFlights(1);
-				else if(requestSent == 0)
-					isGetAvailCancelled = false;
+				if(!isNaN(avo.classAvailW))
+				{
+					seatAvail += avo.classAvailW;
+					cabinData += "W" + String(avo.classAvailW) + ",";
+				}
 				
-				if(requestSent == 0)
-					isAvailRunning = false;
+				if(!isNaN(avo.classAvailM))
+				{
+					seatAvail += avo.classAvailM;
+					cabinData += "M" + String(avo.classAvailM) + ",";
+				}
+				
+				if(!isNaN(avo.classAvailE))
+				{
+					seatAvail += avo.classAvailE;
+					cabinData += "E" + String(avo.classAvailE) + ",";
+				}
+				
+				if(!isNaN(avo.classAvailX))
+					cabinData += "X" + String(avo.classAvailX);
+				
+				if(cabinData.length > 0)
+					if(cabinData.charAt(cabinData.length - 1) == ',')
+						cabinData = cabinData.substring(0, cabinData.length - 1);
+				
+				flightLeg.seats = int(seatAvail);
+				flightLeg.cabinData = cabinData; 
 			}
 
+			private function calculateTotalAvailability(route:RouteVO):String
+			{
+				var fltSeats:int = 10000;
+				
+				for(var i:int = 0; i < route.fltLegs.length; i++)
+					{
+					var fltLeg:FlightLegVO = route.fltLegs[i] as FlightLegVO;
+					
+					if(fltLeg.cabinData == null || fltLeg.cabinData == '')
+						return(null);
+						
+					if(fltSeats > fltLeg.seats)
+						fltSeats = fltLeg.seats;
+					}
+
+				if(fltSeats == 10000)
+					return(null);
+				
+				return(String(fltSeats));
+			}
+			
 			public function startFiltering(item:Object):Boolean
 			{
+				if(filterAirlineCodes.length == 0 && !fAvl.selected && !fnonstop.selected && !fonestop.selected && !ftwostops.selected)
+					return true;
+				
+				var thisRoute:RouteVO = item as RouteVO;
+				
+				var seatsAvailable:int = int(thisRoute.totalSeats);
+				var flightCount:int = thisRoute.fltLegs.length;
+				
+				if(filterAirlineCodes.length > 0)
+					{
+					var routeAirlineCodes:Array = new Array();					
+					
+					for(var i:int = 0; i < flightCount; i++)
+						routeAirlineCodes.push(FlightLegVO(thisRoute.fltLegs[i]).airline);
 
-				var routeforFiltering:RouteVO= item as RouteVO;
-				var seatsAvailable:int=Number(routeforFiltering.totalSeats);
-				var flightLegs:Array= routeforFiltering.fltLegs;
-				
-				var flight:FlightLegVO=null;
-				var legLength:Number =0;				
-				
-					var routeAirlineCodes:Array=new Array();
-					var b:int=0;
-					var flightCount:Number =0;
-					for(var i:int=0;i<flightLegs.length;i++)
-					{
-						flight = flightLegs[i];
-						routeAirlineCodes[b]=flight.airline;
-						b++;
-						flightCount++;
+					routeAirlineCodes.sort();
 						
-					}
-					
-					if(filterAirlineCodes.length >0)
-					{
-						routeAirlineCodes.sort();
-					
-					
 					if(routeAirlineCodes.length > 1)
-					{
-						
+						{
 						var s:int=0;
-						do
-						{ 
+
+						do 	{
 							if(routeAirlineCodes[s] == routeAirlineCodes[s+1])
-							{
+								{
 								routeAirlineCodes.splice(s,1);
 								s--;
-							}
+								}
 							s++;
-						}while(s< routeAirlineCodes.length)
-						
-					}
-					
-					
+							} while(s< routeAirlineCodes.length);
+						}
+							
+							
 					var matchCount:int=0;
 					var legcount:int=routeAirlineCodes.length;
 					var filtercriteriacount:int=filterAirlineCodes.length;
-					
+							
 					if(filtercriteriacount < legcount )
 						matchCount=0;
-					else
-					{
+					else {
 						for(var p:int=0; p< legcount;p++)
-						{
-							for(var q:int=0; q < filtercriteriacount;q++)
 							{
+							for(var q:int=0; q < filtercriteriacount;q++)
+								{
 								if(routeAirlineCodes[p]==filterAirlineCodes[q])
 									matchCount++;
+								}
 							}
-							
 						}
-					}
-					
-					
-					if(matchCount == legcount)	
-					{
-						if(fAvl.selected)
+							
+					if(matchCount == legcount)
 						{
+						if(fAvl.selected)
+							{
 							if(seatsAvailable>0)
-							{
+								{
 								if(fnonstop.selected)
-								{
-									legLength = 1;
-									if(legLength == flightCount)
+									{
+									if(flightCount == 1)
 										return true;
-								}
-								
+									}
 								if(fonestop.selected)
-								{
-									legLength=2;
-									if(legLength ==flightCount)
+									{
+									if(flightCount == 2)
 										return true;
-								}
+									}
 								if(ftwostops.selected)
-								{
-									legLength =3;
-									if(legLength == flightCount)
+									{
+									if(flightCount == 3)
 										return true;
-								}
+									}
 								if(!fnonstop.selected && !fonestop.selected && !ftwostops.selected)
 									return true;
-							//return false;
-							}
+										//return false;
+								}
 							return false;
-						}
-						
-						
+							}
+							
+							
 						if(!fAvl.selected)
-						{
+							{
 							if(fnonstop.selected)
 								{
-									legLength = 1;
-									if(legLength == flightCount)
-										return true;
+								if(flightCount == 1)
+									return true;
 								}
-								
+							
 							if(fonestop.selected)
 								{
-									legLength=2;
-									if(legLength ==flightCount)
-										return true;
+								if(flightCount == 2)
+									return true;
 								}
+							
 							if(ftwostops.selected)
 								{
-									legLength =3;
-									if(legLength == flightCount)
-										return true;
+								if(flightCount == 3)
+									return true;
 								}
+							
 							if(!fnonstop.selected && !fonestop.selected && !ftwostops.selected)
-									return true;
-							
-						}
+								return true;
+							}
+						
 						return false;
-						
-					}
-					
-				}
-					
-				if(filterAirlineCodes.length ==0)
-					{
-						if(fAvl.selected)
-						{
-							if(seatsAvailable >0)
-							{
-								if(fnonstop.selected)
-								{
-									legLength = 1;
-									if(legLength == flightCount)
-										return true;
-								}
-								
-								if(fonestop.selected)
-								{
-									legLength=2;
-									if(legLength ==flightCount)
-										return true;
-								}
-								if(ftwostops.selected)
-								{
-									legLength =3;
-									if(legLength == flightCount)
-										return true;
-								}
-								
-								if(!fnonstop.selected && !fonestop.selected && !ftwostops.selected)
-									return true;
-							}
-							return false;
 						}
+					}
 						
-						if(!fAvl.selected)
+				if(filterAirlineCodes.length == 0)
+					{
+					if(fAvl.selected)
 						{
-							if(fnonstop.selected)
+						if(seatsAvailable > 0)
 							{
-								legLength = 1;
-								if(legLength == flightCount)
+							if(fnonstop.selected)
+								{
+								if(flightCount == 1)
 									return true;
-							}
+								}
 							
 							if(fonestop.selected)
-							{
-								legLength=2;
-								if(legLength ==flightCount)
+								{
+								if(flightCount == 2)
 									return true;
-							}
+								}
+							
 							if(ftwostops.selected)
-							{
-								legLength =3;
-								if(legLength == flightCount)
+								{
+								if(flightCount == 3)
 									return true;
+								}
+								
+							if(!fnonstop.selected && !fonestop.selected && !ftwostops.selected)
+								return true;
 							}
-
+						
+						return false;
 						}
-
-				}
-
-				
-				if(filterAirlineCodes.length==0 &&!fAvl.selected && !fnonstop.selected && !fonestop.selected && !ftwostops.selected)
-					return true;
+						
+					if(!fAvl.selected)
+						{
+						if(fnonstop.selected)
+							{
+							if(flightCount == 1)
+								return true;
+							}
+						
+						if(fonestop.selected)
+							{
+							if(flightCount == 2)
+								return true;
+							}
+						
+						if(ftwostops.selected)
+							{
+							if(flightCount == 3)
+								return true;
+							}
+						}
+					}
 
 					return false;	
 			}
-
-			protected var filterAirlineCodes:Array=new Array();
 			
-			protected function filterresults_clickHandler(event:MouseEvent):void
+			protected function performFilter():void
 			{	
-				filterAirlineCodes.length=0;
-				var airlineselection:String='';
+				filterAirlineCodes = new Array();
 				
 				if(fAA.selected)
 					filterAirlineCodes.push("AA");
@@ -991,10 +787,10 @@
 				if(fJL.selected)
 					filterAirlineCodes.push("JL");
 
-				 if(fAY.selected)
+				if(fAY.selected)
 					filterAirlineCodes.push("AY") 
 						
-				 if(fUS.selected)
+				if(fUS.selected)
 					filterAirlineCodes.push("US");  
 
 				filterAirlineCodes.sort();
@@ -1005,9 +801,6 @@
 		
 			public function startGettingAvailButton():void
 			{
-				if(totalPendingAvail < 1)
-					return;
-
 				if(listTimeStamp != null)
 					{
 					var timeElapsed:Number = (new Date()).time - listTimeStamp.time;
@@ -1018,8 +811,21 @@
 						return;
 						}
 					}
-
-				getAvailForPendingFlights(5);
+				
+				fAA.selected = false;
+				fBA.selected = false;
+				fIB.selected = false;
+				fJL.selected = false;
+				fAY.selected = false; 
+				fUS.selected = false;  
+				fnonstop.selected = false;
+				fonestop.selected = false;
+				ftwostops.selected = false;
+				fAvl.selected = false;
+				
+				performFilter();	// make sure all Routes are NOT filtered out before getting availability
+				
+				getAvailForPendingFlights();
 			}
 		]]>
 	</fx:Script>
@@ -1055,7 +861,7 @@
 			<s:Spacer width="10%"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
-					 text="Build Date: 18FEB2014" click="getBackEndBuildDate()"/>
+					 text="Build Date: 24FEB2014" click="getBackEndBuildDate()"/>
 			
 			<s:Spacer width="100%"/>
 			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic" fontWeight="bold"/>
@@ -1090,22 +896,22 @@
 						<s:VGroup id="statusBox" visible="true" fontWeight="bold">
 							<s:HGroup includeInLayout="true">
 								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="Status: "/> 
-								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="{(isAvailRunning ? 'Running...' : 'Stopped')}"/>
+								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="{(isAvailRunning ? 'Running...' : (availComplete ? 'Finished' : 'Stopped'))}"/>
 							</s:HGroup>
 							<s:HGroup includeInLayout="true">
 								<s:Label color="{(isAvailRunning ? 0xB40000 : 0x007F00)}" text="Fights Pending Avail: "/>
-								<s:Label id="stillPending" color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"/>
+								<s:Label id="stillPending" text="0" color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"/>
 							</s:HGroup>
-							<s:Label visible="{isGetAvailCancelled}" color="#B40000" text="CANCELLING...One Moment..."/>
+							<s:Label visible="{cancelGetAvail}" color="#B40000" text="CANCELLING...One Moment..."/>
 							<s:HGroup  horizontalAlign="center" gap="20">	
 								<s:Button id="cxlbtn" label="Stop"
-										  click="{isGetAvailCancelled = true;}"
+										  click="{cancelGetAvail = true;}"
 										  color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"
 										  enabled="{isAvailRunning}"/>
 								<s:Button label="Start"
-										  click="{isGetAvailCancelled = false; startGettingAvailButton();}"
+										  click="{cancelGetAvail = false; startGettingAvailButton();}"
 										  color="{(isAvailRunning ? 0xB40000 : 0x007F00)}"
-										  enabled="{!isAvailRunning}"/>
+										  enabled="{!isAvailRunning &amp;&amp; !availComplete}"/>
 							</s:HGroup>
 						</s:VGroup>
 					</s:BorderContainer>
@@ -1201,7 +1007,7 @@
 								
 								<s:HGroup width="100%" horizontalAlign="center">
 									<s:Button id="Filter" label="Apply Filter"
-											  click="{filterresults_clickHandler(event)}"
+											  click="{performFilter()}"
 											  fontWeight="bold" horizontalCenter="0"/>
 								</s:HGroup>
 							</s:Group>
@@ -1217,8 +1023,8 @@
 					variableRowHeight="true" skinClass="skin.DataGridSkin">
 			<s:columns>
 				<s:ArrayList>
-					<s:GridColumn dataField="rank" headerText="--" itemRenderer="itemrenderers.ResultGridItemRenderer" sortable="false" width="1500"/>
 					<s:GridColumn dataField="rowIndex" itemRenderer="itemrenderers.LineCountItemRenderer" sortable="false" width="35"/>
+					<s:GridColumn dataField="rank" headerText="--" itemRenderer="itemrenderers.ResultGridItemRenderer" sortable="false" width="1700"/>
 				</s:ArrayList>
 			</s:columns>
 		</s:DataGrid>
