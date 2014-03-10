@@ -62,6 +62,8 @@
 			import com.aa.rpt.apps.owr.vo.SearchScreenVO;
 			
 			import mx.collections.ArrayCollection;
+			import spark.collections.Sort;
+			import spark.collections.SortField
 			import mx.controls.Alert;
 			import mx.controls.Spacer;
 			import mx.core.FlexGlobals;
@@ -92,6 +94,7 @@
 			[Bindable] private var cancelGetAvail:Boolean = false;
 			[Bindable] private var isAvailRunning:Boolean = false;
 			[Bindable] private var availComplete:Boolean = true;
+			[Bindable] private var hasAvailRoutes:Boolean = false;
 
 			[Bindable] private var fltsPendingAvail:ArrayCollection = new ArrayCollection();
 
@@ -278,13 +281,15 @@
 				searchScreen.removeEventListener('getConnectionsEvent', requestDataFromServer);
 				PopUpManager.removePopUp(searchScreen);
 				
-				listTimeStamp = new Date();
+				listTimeStamp = null;
 				
 				if(routeList != null)
 					routeList.removeAll();
 				
 				if(uniqueFltsList != null)
 					uniqueFltsList.removeAll();
+				
+				hasAvailRoutes = false;
 				
 				routeList = alfaDataVO.routeList;
 				uniqueFltsList = alfaDataVO.getAvailList;
@@ -381,7 +386,8 @@
 				fnonstop.selected = false;
 				fonestop.selected = false;
 				ftwostops.selected = false;
-				fAvl.selected = false;
+				fAvlOnly.selected = false;
+				fAvlSort.selected = false;
 				
 				getAvailForPendingFlights(true);
 			}
@@ -451,6 +457,9 @@
 					connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsPendingAvail);
 					fltsPendingAvail.removeAll();
 					}
+				
+				if(listTimeStamp == null)
+					listTimeStamp = new Date();
 			}
 			
 			private function getCabinAvailabiliyMultiResultHandler(resultEvent:ResultEvent):void
@@ -525,6 +534,9 @@
 						assignSeats(faVO.availabilityVO, route.fltLegs[int(rowCol[1])]);	// rowCol[1] is the leg index
 
 					route.totalSeats = calculateTotalAvailability(route);
+
+					if(route.totalSeats > 0)
+						hasAvailRoutes = true;
 					}
 			}
 			
@@ -586,7 +598,7 @@
 				flightLeg.cabinData = cabinData; 
 			}
 
-			private function calculateTotalAvailability(route:RouteVO):String
+			private function calculateTotalAvailability(route:RouteVO):int
 			{
 				var fltSeats:int = 10000;
 				
@@ -595,26 +607,26 @@
 					var fltLeg:FlightLegVO = route.fltLegs[i] as FlightLegVO;
 					
 					if(fltLeg.cabinData == null || fltLeg.cabinData == '')
-						return(null);
+						return(-1);
 						
 					if(fltSeats > fltLeg.seats)
 						fltSeats = fltLeg.seats;
 					}
 
 				if(fltSeats == 10000)
-					return(null);
+					return(-1);
 				
-				return(String(fltSeats));
+				return(fltSeats);
 			}
 			
 			public function startFiltering(item:Object):Boolean
 			{
-				if(filterAirlineCodes.length == 0 && !fAvl.selected && !fnonstop.selected && !fonestop.selected && !ftwostops.selected)
+				if(filterAirlineCodes.length == 0 && !fAvlOnly.selected && !fnonstop.selected && !fonestop.selected && !ftwostops.selected)
 					return true;
 				
 				var thisRoute:RouteVO = item as RouteVO;
 				
-				var seatsAvailable:int = int(thisRoute.totalSeats);
+				var seatsAvailable:int = thisRoute.totalSeats;
 				var flightCount:int = thisRoute.fltLegs.length;
 				
 				if(filterAirlineCodes.length > 0)
@@ -660,9 +672,9 @@
 							
 					if(matchCount == legcount)
 						{
-						if(fAvl.selected)
+						if(fAvlOnly.selected)
 							{
-							if(seatsAvailable>0)
+							if(seatsAvailable > 0)
 								{
 								if(fnonstop.selected)
 									{
@@ -687,7 +699,7 @@
 							}
 							
 							
-						if(!fAvl.selected)
+						if(!fAvlOnly.selected)
 							{
 							if(fnonstop.selected)
 								{
@@ -717,7 +729,7 @@
 						
 				if(filterAirlineCodes.length == 0)
 					{
-					if(fAvl.selected)
+					if(fAvlOnly.selected)
 						{
 						if(seatsAvailable > 0)
 							{
@@ -746,7 +758,7 @@
 						return false;
 						}
 						
-					if(!fAvl.selected)
+					if(!fAvlOnly.selected)
 						{
 						if(fnonstop.selected)
 							{
@@ -773,6 +785,8 @@
 			
 			protected function performFilter():void
 			{	
+				myFilters.enabled = false;
+				
 				filterAirlineCodes = new Array();
 				
 				if(fAA.selected)
@@ -797,8 +811,47 @@
 				
 				routeList.filterFunction = startFiltering;
 				routeList.refresh();
+				
+				if(fAvlSort.selected)
+					{
+					if(routeList.sort == null)
+						{
+						var mySort:Sort = new Sort();
+					
+						mySort.compareFunction = sortByAvail;
+						routeList.sort = mySort;
+						routeList.refresh();
+						}
+					}
+				else if(routeList.sort != null)
+					{
+					routeList.sort = null;
+					routeList.refresh();
+					}
+				
+				myFilters.enabled = true;
 			}
-		
+
+			public function sortByAvail(a:Object, b:Object, fields:Array = null):int
+			{
+				var seat1:int = RouteVO(a).totalSeats;
+				var seat2:int = RouteVO(b).totalSeats;
+	
+				if(seat1 == seat2)
+					return(0);
+				
+				if(seat2 == -1)
+					return(-1);
+				
+				if(seat1 == -1)
+					return(1);
+				
+				if(seat1 < seat2)
+					return(1);
+				
+				return(-1);
+			}
+				
 			public function startGettingAvailButton():void
 			{
 				if(listTimeStamp != null)
@@ -821,7 +874,8 @@
 				fnonstop.selected = false;
 				fonestop.selected = false;
 				ftwostops.selected = false;
-				fAvl.selected = false;
+				fAvlOnly.selected = false;
+				fAvlSort.selected = false;
 				
 				performFilter();	// make sure all Routes are NOT filtered out before getting availability
 				
@@ -861,7 +915,7 @@
 			<s:Spacer width="10%"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
-					 text="Build Date: 24FEB2014" click="getBackEndBuildDate()"/>
+					 text="Build Date: 26FEB2014" click="getBackEndBuildDate()"/>
 			
 			<s:Spacer width="100%"/>
 			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic" fontWeight="bold"/>
@@ -968,47 +1022,45 @@
 				<s:SkinnableContainer enabled="{!isAvailRunning}" width="220" backgroundColor="#FFFFFF" skinClass="skin.AvailabilityBoxSkin">
 					<s:VGroup width="100%">
 						
-						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Filter Results:"/>
+						<s:Label color="#FFFFFF" fontSize="20" fontWeight="bold" text="Sort and Filter:"/>
 
-						<s:BorderContainer width="100%" borderStyle="solid" borderWeight="2"
+						<s:BorderContainer id="myFilters" width="100%" borderStyle="solid" borderWeight="2"
 										   horizontalCenter="0" includeInLayout="true">
 							
 							<s:Group  left="2" right="2" top="2" bottom="2">
 								<s:layout>
 									<s:VerticalLayout horizontalAlign="left" verticalAlign="middle"/>
 								</s:layout>
+
+								<s:HGroup verticalAlign="middle" enabled="{hasAvailRoutes}">
+									<s:Label fontWeight="bold" text="Sort By Availability:"/>
+									<s:CheckBox id="fAvlSort" change="{performFilter()}"/>
+								</s:HGroup>
+
+								<s:HGroup verticalAlign="middle" enabled="{hasAvailRoutes}">
+									<s:Label fontWeight="bold" text="Available Routes Only:"/>
+									<s:CheckBox id="fAvlOnly" change="{performFilter()}"/>
+								</s:HGroup>
 								
+								<s:Spacer height="4"/>
 								<s:Label fontWeight="bold" text="Airlines:"/>
-								
 								<s:HGroup>
-									<s:CheckBox id="fAA" label="AA"/>
-									<s:CheckBox id="fBA" label="BA"/>
-									<s:CheckBox id="fIB" label="IB"/>
+									<s:CheckBox id="fAA" label="AA" change="{performFilter()}"/>
+									<s:CheckBox id="fBA" label="BA" change="{performFilter()}"/>
+									<s:CheckBox id="fIB" label="IB" change="{performFilter()}"/>
 								</s:HGroup>
 								<s:HGroup>
-									<s:CheckBox id="fJL" label="JL"/>
-									<s:CheckBox id="fAY" label="AY"/>
-									<s:CheckBox id="fUS" label="US"/>
+									<s:CheckBox id="fJL" label="JL" change="{performFilter()}"/>
+									<s:CheckBox id="fAY" label="AY" change="{performFilter()}"/>
+									<s:CheckBox id="fUS" label="US" change="{performFilter()}"/>
 								</s:HGroup>								
 								
 								<s:Spacer height="4"/>
 								<s:Label fontWeight="bold" text="Connections:"/>
 								<s:HGroup>
-									<s:CheckBox id="fnonstop"  label="1 Leg"/>
-									<s:CheckBox id="fonestop"  label="2 Leg"/>
-									<s:CheckBox id="ftwostops" label="3 Leg"/>
-								</s:HGroup>
-								
-								<s:Spacer height="4"/>
-								<s:HGroup verticalAlign="middle">
-									<s:Label fontWeight="bold" text="Available Routes Only:"/>
-									<s:CheckBox id="fAvl"/>
-								</s:HGroup>
-								
-								<s:HGroup width="100%" horizontalAlign="center">
-									<s:Button id="Filter" label="Apply Filter"
-											  click="{performFilter()}"
-											  fontWeight="bold" horizontalCenter="0"/>
+									<s:CheckBox id="fnonstop"  label="1 Leg" change="{performFilter()}"/>
+									<s:CheckBox id="fonestop"  label="2 Leg" change="{performFilter()}"/>
+									<s:CheckBox id="ftwostops" label="3 Leg" change="{performFilter()}"/>
 								</s:HGroup>
 							</s:Group>
 							
@@ -1023,7 +1075,6 @@
 					variableRowHeight="true" skinClass="skin.DataGridSkin">
 			<s:columns>
 				<s:ArrayList>
-					<s:GridColumn dataField="rowIndex" itemRenderer="itemrenderers.LineCountItemRenderer" sortable="false" width="35"/>
 					<s:GridColumn dataField="rank" headerText="--" itemRenderer="itemrenderers.ResultGridItemRenderer" sortable="false" width="1700"/>
 				</s:ArrayList>
 			</s:columns>

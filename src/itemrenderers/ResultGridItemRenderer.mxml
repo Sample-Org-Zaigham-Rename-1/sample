@@ -77,8 +77,9 @@
 				if(!data)
 					return;
 				
-//				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xADADAD);
 				sc.color = ((rowIndex % 2) == 0 ? 0xFFFFF0 : 0xFFFFD0);
+				
+				rowNum.text = String(rowIndex + 1);
 			}
 			
 			override public function set data(value:Object):void
@@ -114,7 +115,7 @@
 				conxTime2.text='';
 				tip='';
 				statusImg=pending;
-				count='';
+				count='-?-';
 				mctFlt1.text='';
 				mctFlt2.text='';
 
@@ -127,11 +128,12 @@
 				if(fltLegs == null || fltLegs.length <= 0)
 					return;
 					
-				if(route.totalSeats != null && route.totalSeats != '')
+				if(route.totalSeats >= 0)
 					{
-					count = route.totalSeats;
-						
-					if(Number(count) > 0)
+					count = String(route.totalSeats);
+					totAvail.setStyle("color", 0x0000FF);
+
+					if(route.totalSeats > 0)
 						{
 						statusImg = available;
 						tip = count + " Seats Available";
@@ -162,18 +164,18 @@
 							arvTimeFlt1.text=fltVO1.arrivalTime.substr(0,2) + "/" + fltVO1.arrivalTime.substr(9,4);
 							
 							if(route.mctConx1 != null)
-								 mctFlt1.text = "mct " + route.mctConx1;
+								 mctFlt1.text = route.mctConx1;
 								
-							if(fltVO1.cabinData)
+							if(fltVO1.cabinData != null)
 								{
-								cabinData.setStyle("color", 0x000000);
-								cabinData.text=fltVO1.cabinData;
+								cabinData.setStyle("color", 0x0000FF);
+								cabinData.text = fltVO1.cabinData;
 								}
 							else {
 								cabinData.setStyle("color", 0xFF0000);
-								cabinData.text="--- --- ---";
+								cabinData.text = "----- ? -----";
 								}
-
+							
 							continue;
 							}
 						case 1:
@@ -190,7 +192,7 @@
 							arvTimeFlt2.text=fltVO2.arrivalTime.substr(0,2) + "/" + fltVO2.arrivalTime.substr(9,4);
 							
 							if(route.mctConx2 != null)
-								 mctFlt2.text = "mct " + route.mctConx2;
+								 mctFlt2.text = route.mctConx2;
 								
 							var leg1ArvTime:Date= new Date(Number(fltVO1.arrivalTime.substr(5,4)),
 								DateUtil.getMonth(fltVO1.arrivalTime.substr(2,3)),
@@ -208,12 +210,12 @@
 								
 							if(fltVO2.cabinData)
 								{
-								cabinData1.setStyle("color", 0x000000);
+								cabinData1.setStyle("color", 0x0000FF);
 								cabinData1.text=fltVO2.cabinData;
 								}
 							else {
 								cabinData1.setStyle("color", 0xFF0000);
-								cabinData1.text="--- --- ---";
+								cabinData1.text="----- ? -----";
 								}
 
 							continue;;
@@ -247,12 +249,12 @@
 								
 							if(fltVO3.cabinData)
 								{
-								cabinData2.setStyle("color", 0x000000);
+								cabinData2.setStyle("color", 0x0000FF);
 								cabinData2.text=fltVO3.cabinData;
 								}
 							else {
 								cabinData2.setStyle("color", 0xFF0000);
-								cabinData2.text="--- --- ---";
+								cabinData2.text="----- ? -----";
 								}
 							}
 						}
@@ -269,110 +271,92 @@
 		</s:fill>
 	</s:Rect>
 	
-	<s:HGroup height="100%" paddingTop="5" paddingLeft="1" paddingBottom="5" paddingRight="1">
-		<s:VGroup>
+	<s:HGroup height="100%" paddingTop="5" paddingLeft="1" paddingBottom="0" paddingRight="1" gap="0" >
+		<s:VGroup gap="5">
 			<s:Image source="{statusImg}" toolTip="{tip}"/>
-			<s:Label  textAlign="center" text="{count}" color="#0000FF" width="32" fontWeight="bold" toolTip="{tip}"/>
+			<s:Label id="rowNum" fontSize="8" paddingBottom="0"/>
+		</s:VGroup>
+		
+		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
+			<s:Label id="totAvail" textAlign="center" text="{count}" color="#FF0000" width="32" fontWeight="bold" toolTip="{tip}" verticalAlign="middle"/>
 		</s:VGroup>
 		
 		<s:Image id="leg1airline"/>
 		
 		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
 			<s:HGroup>
-				<s:Spacer width="1"/>
 				<s:Label id="airlineFltnumFlt1" width="60"  toolTip="Flt Number"  fontWeight="bold" verticalAlign="middle"/>
 				<s:Label id="depArvFlt1" width="70"  fontWeight="bold" verticalAlign="middle"/>
 			</s:HGroup>
 			<s:HGroup>
-				<s:Spacer width="1"/>
 				<s:Label id="depTimeFlt1"  toolTip="Latest Dep Time" width="60" verticalAlign="middle"/>
 				<s:Label id="arvTimeFlt1"  toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
 			</s:HGroup>
 		</s:VGroup>
 		
-		<s:VGroup>
-			<s:Spacer height="9"/>	
+		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
 			<s:Label id="cabinData"
-					 fontWeight="bold"
-					 fontSize="13"
-					 width="140"
-					 toolTip="Availability"
-					 color="#FF0000"
-					 text="--- --- ---"
-					 verticalAlign="middle"
-					 visible="false"/>
-			<s:Label id="mctFlt1" toolTip="Minimum Connect Time" color="green" fontSize="13"  fontWeight="bold" width="130" textAlign="right"/>
+					 fontWeight="bold" fontSize="13" width="140" toolTip="Availability"
+					 color="#FF0000" verticalAlign="middle" visible="false"/>
 		</s:VGroup>
 		
-		<s:VGroup>
-			<s:Spacer height="2"/>
+		<s:VGroup gap="0">
+			<s:Spacer height="3"/>
 			<s:Label id="conxTime1" toolTip="Actual Connect Time" color="green" fontSize="13" fontWeight="bold"/>
-			<s:Image id="conx1Image" source="{rArrow}" visible="false" includeInLayout="true"/>
+			<s:Image id="conx1Image" source="{rArrow}" visible="false"/>
+			<s:Spacer height="3"/>
+			<s:Label id="mctFlt1" toolTip="Minimum Connect Time" color="blue" fontSize="13" fontWeight="normal"/>
 		</s:VGroup>
 		
 		<s:Image id="leg2airline" visible="false"/>
 		
 		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
 			<s:HGroup>
-				<s:Spacer width="1"/>
 				<s:Label id="airlineFltnumFlt2" width="60" text="" toolTip="Flt Number"  fontWeight="bold" verticalAlign="middle"/>
 				<s:Label id="depArvFlt2" width="70" text="" toolTip="" fontWeight="bold" verticalAlign="middle"/>
 			</s:HGroup>
 			<s:HGroup>
-				<s:Spacer width="1"/>
 				<s:Label id="depTimeFlt2" toolTip="Latest Dep Time" width="60" verticalAlign="middle"/>
 				<s:Label id="arvTimeFlt2" toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
 			</s:HGroup>
 		</s:VGroup>
 		
-		<s:VGroup>
-			<s:Spacer height="9"/>	
-			<s:Label id="cabinData1"
-					 fontWeight="bold"
-					 fontSize="13"
-					 width="140"
-					 toolTip="Availability"
-					 color="#FF0000"
-					 text="--- --- ---"
-					 verticalAlign="middle"
-					 visible="false"
-					 includeInLayout="true"/>
-			<s:Label id="mctFlt2" toolTip="Minimum Connect Time" color="green" fontSize="13"  fontWeight="bold" width="130" textAlign="right"/>
+		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
+			<s:Label id="cabinData1" fontWeight="bold" fontSize="13" width="140" toolTip="Availability"
+					 color="#FF0000" verticalAlign="middle" visible="false"/>
 		</s:VGroup>
 		
-		<s:VGroup>
-			<s:Spacer height="2"/>
+		<s:VGroup gap="0">
+			<s:Spacer height="3"/>
 			<s:Label id="conxTime2" toolTip="Actual Connect Time" color="green" fontSize="13" fontWeight="bold"/>
-			<s:Image id="conx2Image" source="{rArrow}" visible="false" includeInLayout="true"/>
+			<s:Image id="conx2Image" source="{rArrow}" visible="false"/>
+			<s:Spacer height="3"/>
+			<s:Label id="mctFlt2" toolTip="Minimum Connect Time" color="blue" fontSize="13" fontWeight="normal"/>
 		</s:VGroup>
 		
 		<s:Image id="leg3airline" visible="false"/>
 		
 		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
 			<s:HGroup>
-				<s:Spacer width="1"/>
 				<s:Label id="airlineFltnumFlt3" width="60" text="" toolTip="Flt Number"  fontWeight="bold" verticalAlign="middle"/>
 				<s:Label id="depArvFlt3" width="70" text="" toolTip="" fontWeight="bold" verticalAlign="middle"/>
 			</s:HGroup>
 			<s:HGroup>
-				<s:Spacer width="1"/>
 				<s:Label id="depTimeFlt3" toolTip="Latest Dep Time" width="60" verticalAlign="middle"/>
 				<s:Label id="arvTimeFlt3" toolTip="Latest Arv Time" width="60" verticalAlign="middle"/>
 			</s:HGroup>
 		</s:VGroup>
 		
-		<s:VGroup>
-			<s:Spacer height="9"/>	
-			<s:Label id="cabinData2"
-					 fontWeight="bold"
-					 fontSize="13"
-					 width="140"
-					 toolTip="Availability"
-					 color="#FF0000"
-					 text="--- --- ---"
-					 verticalAlign="middle"
-					 visible="false"
-					 includeInLayout="true"/>
+		<s:VGroup gap="5">
+			<s:Spacer height="2"/>
+			<s:Label id="cabinData2" fontWeight="bold" fontSize="13" width="140" toolTip="Availability"
+					 color="#FF0000" verticalAlign="middle" visible="false"/>
 		</s:VGroup>
 		
 		<s:Spacer width="100%"/>
