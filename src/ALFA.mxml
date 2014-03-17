@@ -588,11 +588,14 @@
 				}
 				
 				if(!isNaN(avo.classAvailX))
-					cabinData += "X" + String(avo.classAvailX);
+				{
+					seatAvail += avo.classAvailX;
+					cabinData += "X" + String(avo.classAvailX) + ",";
+				}
 				
 				if(cabinData.length > 0)
-					if(cabinData.charAt(cabinData.length - 1) == ',')
-						cabinData = cabinData.substring(0, cabinData.length - 1);
+					 cabinData = cabinData.substring(0, cabinData.length - 1);
+				else cabinData = null;
 				
 				flightLeg.seats = int(seatAvail);
 				flightLeg.cabinData = cabinData; 
@@ -600,7 +603,7 @@
 
 			private function calculateTotalAvailability(route:RouteVO):int
 			{
-				var fltSeats:int = 10000;
+				var smallestSeats:int = 10000;
 				
 				for(var i:int = 0; i < route.fltLegs.length; i++)
 					{
@@ -609,14 +612,14 @@
 					if(fltLeg.cabinData == null || fltLeg.cabinData == '')
 						return(-1);
 						
-					if(fltSeats > fltLeg.seats)
-						fltSeats = fltLeg.seats;
+					if(fltLeg.seats < smallestSeats)
+						smallestSeats = fltLeg.seats;
 					}
 
-				if(fltSeats == 10000)
+				if(smallestSeats == 10000)
 					return(-1);
 				
-				return(fltSeats);
+				return(smallestSeats);
 			}
 			
 			public function startFiltering(item:Object):Boolean
