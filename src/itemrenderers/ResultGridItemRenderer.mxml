@@ -144,6 +144,7 @@
 						}
 					}
 				else {
+					totAvail.setStyle("color", 0xFF0000);
 					statusImg = pending;
 					tip = "Pending Availability";
 					}
@@ -208,7 +209,7 @@
 								
 							conxTime1.text= timeFormat(((leg2DepTime.time-leg1ArvTime.time)/60000));
 								
-							if(fltVO2.cabinData)
+							if(fltVO2.cabinData != null)
 								{
 								cabinData1.setStyle("color", 0x0000FF);
 								cabinData1.text=fltVO2.cabinData;
@@ -247,7 +248,7 @@
 								
 							conxTime2.text= timeFormat(((leg3DepTime.time-leg2ArvTime.time)/60000));
 								
-							if(fltVO3.cabinData)
+							if(fltVO3.cabinData != null)
 								{
 								cabinData2.setStyle("color", 0x0000FF);
 								cabinData2.text=fltVO3.cabinData;

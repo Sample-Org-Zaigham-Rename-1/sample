@@ -15,7 +15,7 @@ package com.aa.rpt.apps.owr.vo
 		public var miles:String;
 		
 		public var seats:int;
-		public var cabinData:String = null;
+		public var cabinData:String;
 		
 		public function toString():String{
 			return airline+' '+flightNumber+' '+departureStation+' '+arrivalStation;

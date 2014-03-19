@@ -216,7 +216,7 @@
 
 					if(fltParms.fltDepSta.length == 3 && fltParms.fltArvSta.length == 3 )
 						{
-						reqParms.flightNumber = Number(fltParms.fltNum);
+						reqParms.flightNumber = int(fltParms.fltNum);
 						reqParms.airlineCodes = fltParms.fltAirline;
 						reqParms.minDate = ddmmmyyyy.format(fltParms.fltDate);
 						reqParms.depSta = fltParms.fltDepSta;
@@ -464,11 +464,17 @@
 			
 			private function getCabinAvailabiliyMultiResultHandler(resultEvent:ResultEvent):void
 			{
-				var availablityList:ArrayCollection = resultEvent.result as ArrayCollection;
-				
-				for(var i:int = 0; i < availablityList.length; i++)
+				var availabilityList:ArrayCollection = resultEvent.result as ArrayCollection;
+
+				if(availabilityList == null || availabilityList.length == 0)
 					{
-					var faVO:FlightAvailabilityVO = availablityList[i] as FlightAvailabilityVO;
+					cancelGetAvail = true;
+					Alert.show("No Data Is Being Returned From Availability Service In REACCOM");
+					}
+
+				for(var i:int = 0; i < availabilityList.length; i++)
+					{
+					var faVO:FlightAvailabilityVO = availabilityList[i] as FlightAvailabilityVO;
 					
 					if(i == 0 && faVO.status != null && faVO.status.length > 0)
 						{
@@ -479,7 +485,7 @@
 						
 					populateAvailability(faVO);
 					}
-				
+
 				stillPending.text = String(fltsPendingAvail.length);
 				routeList.refresh();
 				getAvailForPendingFlights();
@@ -524,7 +530,7 @@
 			private function populateAvailability(faVO:FlightAvailabilityVO):void
 			{
 				var fltLocation:Array = GetAvailVO(uniqueFltsList.getItemAt(faVO.clientIndex)).fltLocation;
-
+				
 				for(var i:int = 0; i < fltLocation.length; i++)
 					{
 					var rowCol:Array = String(fltLocation[i]).split(","); 
@@ -543,51 +549,51 @@
 			private function assignSeats(avo:AvailabilityVO, flightLeg:FlightLegVO):void
 			{
 				var cabinData:String = '';
-				var seatAvail:Number = 0;
+				var seatAvail:int = 0;
 					
-				if(!isNaN(avo.classAvailF))
+				if(avo.classAvailF != -99)
 				{
 					seatAvail += avo.classAvailF;
 					cabinData += "F" + String(avo.classAvailF) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailC))
+				if(avo.classAvailC != -99)
 				{
 					seatAvail += avo.classAvailC;
 					cabinData += "C" + String(avo.classAvailC) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailY))
+				if(avo.classAvailY != -99)
 				{
 					seatAvail += avo.classAvailY;
 					cabinData += "Y" + String(avo.classAvailY) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailJ))
+				if(avo.classAvailJ != -99)
 				{
 					seatAvail += avo.classAvailJ;
 					cabinData += "J" + String(avo.classAvailJ) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailW))
+				if(avo.classAvailW != -99)
 				{
 					seatAvail += avo.classAvailW;
 					cabinData += "W" + String(avo.classAvailW) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailM))
+				if(avo.classAvailM != -99)
 				{
 					seatAvail += avo.classAvailM;
 					cabinData += "M" + String(avo.classAvailM) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailE))
+				if(avo.classAvailE != -99)
 				{
 					seatAvail += avo.classAvailE;
 					cabinData += "E" + String(avo.classAvailE) + ",";
 				}
 				
-				if(!isNaN(avo.classAvailX))
+				if(avo.classAvailX != -99)
 				{
 					seatAvail += avo.classAvailX;
 					cabinData += "X" + String(avo.classAvailX) + ",";
@@ -597,7 +603,7 @@
 					 cabinData = cabinData.substring(0, cabinData.length - 1);
 				else cabinData = null;
 				
-				flightLeg.seats = int(seatAvail);
+				flightLeg.seats = seatAvail;
 				flightLeg.cabinData = cabinData; 
 			}
 
@@ -918,7 +924,7 @@
 			<s:Spacer width="10%"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
-					 text="Build Date: 26FEB2014" click="getBackEndBuildDate()"/>
+					 text="Build Date: 17MAR2014" click="getBackEndBuildDate()"/>
 			
 			<s:Spacer width="100%"/>
 			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic" fontWeight="bold"/>

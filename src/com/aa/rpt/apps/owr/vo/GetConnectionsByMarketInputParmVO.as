@@ -6,7 +6,7 @@ package com.aa.rpt.apps.owr.vo
 	{
 		public var depSta:String;
 		public var arvSta:String;
-		public var flightNumber:Number;
+		public var flightNumber:int;
 		public var minDate:String;
 		public var maxDate:String;
 		public var domesticconnectTime:String;

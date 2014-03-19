@@ -10,6 +10,6 @@ package com.aa.rpt.apps.owr.vo
 		public var mctConx1:String;
 		public var mctConx2:String;
 		
-		public var totalSeats:int = -1;
+		public var totalSeats:int;
 	}
 }

@@ -37,7 +37,7 @@
 			import mx.controls.Alert;
 			import mx.core.FlexGlobals;
 			import mx.utils.StringUtil;
-
+			
 			private var curParms:SearchScreenVO;
 			private var mktParms:SearchScreenVO;
 			private var fltParms:SearchScreenVO;

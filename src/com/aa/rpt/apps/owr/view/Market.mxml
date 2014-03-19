@@ -18,8 +18,8 @@
 			
 			import spark.events.TextOperationEvent;
 			
-			
-			
+			[Embed(source="images/swap.png")]
+			[Bindable]static private var swap:Class;
 			
 			public function setDepatureEndDate():void
 			{
@@ -102,7 +102,14 @@
 					nextday.enabled=true;
 				}
 			}
-
+			
+			protected function swapOandD():void
+			{
+				var tmp:String = dep_sta.text;
+				
+				dep_sta.text = arr_sta.text;
+				arr_sta.text = tmp;
+			}
 			
 		]]>
 	</fx:Script>
@@ -124,6 +131,7 @@
 			<s:HGroup verticalAlign="middle">
 				<s:Label text="Depart:" fontSize="10"/>
 				<s:TextInput id="dep_sta" text="DFW" restrict="a-zA-Z" maxChars="3" widthInChars="3" change="{dep_sta.text=dep_sta.text.toUpperCase()}"/>
+				<s:Image id="swapIT" source="{swap}" click="swapOandD();"/>
 				<s:Label text="Arrive:" fontSize="10"/>
 				<s:TextInput id="arr_sta" text="LHR" restrict="a-zA-Z" maxChars="3" widthInChars="3" change="{arr_sta.text=arr_sta.text.toUpperCase()}"/>
 			</s:HGroup>
