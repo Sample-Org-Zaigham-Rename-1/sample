@@ -48,6 +48,8 @@
 			//////////////////////////////////////////////
 			private function populateControl():void
 			{
+				Message.text = '';
+					
 				if(tab_nav.selectedIndex == 0)
 					{
 					if(mktParmsPopulated)
@@ -176,7 +178,7 @@
 						
 					if(enddt <= startdt)
 						{
-						Message.text="Invalid Departure Window Date/Time";
+						Message.text = "Invalid Departure Window Date/Time";
 						return;
 						}
 						
@@ -201,23 +203,22 @@
 						
 					ssParms.validAirlines= marketCarrierClause;
 						
-					if(market.arr_sta.text==''||StringUtil.trim(market.arr_sta.text)==''
-							||market.dep_sta.text==''||StringUtil.trim(market.dep_sta.text)=='')
+					if(market.arr_sta.text.length != 3 || market.dep_sta.text.length != 3)
 						{
-						Message.text="Please Enter a Valid Market";
+						Message.text = "Market Requires 3 Letter Station Codes";
 						return;
 						}
 
 					ssParms.arvSta= market.arr_sta.text;
 					ssParms.depSta= market.dep_sta.text;
 
-					if(StringUtil.trim(market.domconnect.text) == '')
+					if(market.domconnect.text.length == 0 || int(market.domconnect.text) == 0)
 						{
-						Message.text = "Please Enter Max Hours To Connect";
+						Message.text = "Max Connect Time Cannot be Blank or Zero";
 						return;
 						}
 						
-					if(StringUtil.trim(market.intconnect.text) == '')
+					if(market.intconnect.text.length == 0 || int(market.intconnect.text) == 0)
 						market.intconnect.text = market.domconnect.text;
 
 					ssParms.domConxTime = market.domconnect.text;
@@ -226,17 +227,16 @@
 						
 					if(market.miles_in_num.selected)
 						{
-						if(market.miles.text==""||StringUtil.trim(market.miles.text)=='')
+						if(market.miles.text.length == 0 || int(market.miles.text) == 0)
 							{
-							Message.text="Please Enter a Value For Miles";
+							Message.text = "Max Mileage Cannot be Blank or Zero";
 							return;
 							}
-						else{
-							ssParms.maxMileage = market.miles.text;
-							ssParms.isMileageInPercent = false;
-							}
+						
+						ssParms.maxMileage = market.miles.text;
+						ssParms.isMileageInPercent = false;
 						}
-					else if(market.milesPercent.text == null || StringUtil.trim(market.milesPercent.text) == '')
+					else if(market.milesPercent.text.length == 0 || Number(market.milesPercent.text) == 0)
 						{
 						ssParms.maxMileage = "1.33";
 						ssParms.isMileageInPercent = true;
@@ -251,6 +251,12 @@
 					ssParms.suppressAvail = market.sup_av_mkt.selected;
 					}
 				else{
+					if(flight.flt_num.text.length == 0 || int(flight.flt_num.text) == 0)
+						{
+						Message.text="Flight Number Cannot Be Blank or Zero";
+						return;
+						}
+					
 					ssParms.fltNum = flight.flt_num.text;
 					ssParms.fltDepSta = flight.dpt_frm.text;
 					ssParms.fltArvSta = flight.dpt_arr.text;
@@ -259,6 +265,8 @@
 					ssParms.suppressAvail = flight.sup_av_flt.selected;
 					}
 
+				SearchButton.enabled = false;
+				
 				dispatchEvent(new GetConnectionsDataEvent('getConnectionsEvent', ssParms));
 			}
 			
@@ -277,11 +285,11 @@
 	
 	<s:HGroup includeInLayout="true" width="100%"  verticalAlign="middle">
 		<s:Spacer width="5"/>
-		<s:Button label="Search" click="{Message.text=''; searchButton(event)}"/>
+		<s:Button id="SearchButton" label="Search" click="{Message.text=''; searchButton(event)}"/>
 		<s:Spacer width="5"/>
 		<s:Label id="Message" color="red"/>
 		<s:HGroup  width="100%" horizontalAlign="right">
-			<s:Button label="Close"  click="{Message.text=''; searchButton(event, true)}"/>
+			<s:Button label="Close" click="{Message.text=''; searchButton(event, true)}"/>
 			<s:Spacer width="5"/>
 		</s:HGroup>
 	</s:HGroup>

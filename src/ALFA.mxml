@@ -11,12 +11,11 @@
 	
 	<fx:Declarations>
 		<!-- Place non-visual elements (e.g., services, value objects) here -->
-		<s:DateTimeFormatter id="ddmmmyyyyhhmm" dateTimePattern="ddMMMyyyyHHmm"/>
-		<s:DateTimeFormatter id="ddmmmyyyyhhmm2" dateTimePattern="ddMMM HH:mm"/>
-		<s:DateTimeFormatter id="ddmmmyyyy" dateTimePattern="ddMMMyyyy"/>
-		<s:DateTimeFormatter id="mmddyyyy" dateTimePattern="MMddyyyy"/>
+		<s:DateTimeFormatter id="yyyyMMddhhmm" dateTimePattern="yyyyMMddHHmm"/>
+		<s:DateTimeFormatter id="ddMMM_hhmm" dateTimePattern="ddMMM HH:mm"/>
+		<s:DateTimeFormatter id="yyyyMMdd" dateTimePattern="yyyyMMdd"/>
 			
-		<s:RemoteObject id="connectionAdvisorRemoteObject" concurrency="multiple"
+		<s:RemoteObject id="alfaRemoteObject" concurrency="multiple"
 						destination="AvailFinderServiceDestination" showBusyCursor="true">
 
 			<s:method fault="{getBackEndBuildDateFaultHandler(event)}"
@@ -84,7 +83,8 @@
 			
 			[Bindable] public var routeList:ArrayCollection;
 			
-			public var uniqueFltsList:ArrayCollection;
+			private var userInfo:String;
+			private var uniqueFltsList:ArrayCollection;
 			
 			private var searchScreen:SearchScreen;
 			private var curParms:SearchScreenVO = null;
@@ -162,8 +162,12 @@
 					PopUpManager.centerPopUp(na);
 					}
 				
-				if(xml != null)
+				if(xml == null)
+					userInfo = "?,?,?,?";
+				else{
 					tiUser.text = xml..firstName + " " + xml..lastName + " [" + xml..userRole + "]";
+					userInfo = xml..userId + "," + xml..lastName + "," + xml..firstName + "," + xml..userRole;
+					}
 			}
 			
 			protected function userAccessFaultHandler(event:FaultEvent):void
@@ -174,7 +178,7 @@
 			
 			protected function getBackEndBuildDate():void
 			{
-				connectionAdvisorRemoteObject.getOperation('getBackEndBuildDate').send();
+				alfaRemoteObject.getOperation('getBackEndBuildDate').send();
 			}
 
 			//
@@ -198,8 +202,8 @@
 
 					reqParms.depSta = mktParms.depSta;
 					reqParms.arvSta = mktParms.arvSta;
-					reqParms.minDate = ddmmmyyyyhhmm.format(mktParms.depDateMin);
-					reqParms.maxDate = ddmmmyyyyhhmm.format(mktParms.depDateMax);
+					reqParms.minDate = yyyyMMddhhmm.format(mktParms.depDateMin);
+					reqParms.maxDate = yyyyMMddhhmm.format(mktParms.depDateMax);
 					reqParms.domesticconnectTime = mktParms.domConxTime;
 					reqParms.internationalconnectTime = mktParms.intConxTime;
 					reqParms.sistercities = mktParms.useSisterCities;
@@ -209,7 +213,7 @@
 					reqParms.avoidStations = mktParms.avoidStations;
 					reqParms.airlineCodes = mktParms.validAirlines;
 					
-					connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(reqParms);
+					alfaRemoteObject.getOperation('getConnectionsByMarket').send(userInfo, reqParms);
 					}
 				else{
 					fltParms = curParms;
@@ -218,16 +222,16 @@
 						{
 						reqParms.flightNumber = int(fltParms.fltNum);
 						reqParms.airlineCodes = fltParms.fltAirline;
-						reqParms.minDate = ddmmmyyyy.format(fltParms.fltDate);
+						reqParms.minDate = yyyyMMdd.format(fltParms.fltDate);
 						reqParms.depSta = fltParms.fltDepSta;
 						reqParms.arvSta = fltParms.fltArvSta;
 
-						connectionAdvisorRemoteObject.getOperation('getConnectionsByMarket').send(reqParms);
+						alfaRemoteObject.getOperation('getConnectionsByMarket').send(userInfo, reqParms);
 						}
 					else{
-						var fltDate:String = ddmmmyyyy.format(fltParms.fltDate);
+						var fltDate:String = yyyyMMdd.format(fltParms.fltDate);
 
-						connectionAdvisorRemoteObject.getOperation('getConnectionsByFlight').send(fltParms.fltNum, fltParms.fltAirline, fltDate);
+						alfaRemoteObject.getOperation('getConnectionsByFlight').send(userInfo, int(fltParms.fltNum), fltParms.fltAirline, fltDate);
 						}
 					}
 			}
@@ -275,6 +279,7 @@
 				if(alfaDataVO.routeList.length == 0)
 					{
 					Alert.show((alfaDataVO.status == null ? "No Routes Found For This Market" : alfaDataVO.status));
+					searchScreen.SearchButton.enabled = true;
 					return;
 					}
 				
@@ -313,11 +318,11 @@
 								break;
 							case 3:
 								theName.text = "DEP Time Start:";
-								theVal.text = ddmmmyyyyhhmm2.format(curParms.depDateMin);
+								theVal.text = ddMMM_hhmm.format(curParms.depDateMin);
 								break;
 							case 4:
 								theName.text = "DEP Time End:";
-								theVal.text = ddmmmyyyyhhmm2.format(curParms.depDateMax);
+								theVal.text = ddMMM_hhmm.format(curParms.depDateMax);
 								break;
 							case 5:
 								theName.text = "Max Conx Time:";
@@ -362,7 +367,7 @@
 								break;
 							case 3:
 								theName.text = "Flight Date:";
-								theVal.text = ddmmmyyyyhhmm2.format(curParms.fltDate);
+								theVal.text = ddMMM_hhmm.format(curParms.fltDate);
 								break;
 							case 4:
 								theName.text = "Airline:";
@@ -449,12 +454,12 @@
 				if(fltsToGetAvail.length > 0)
 					{
 //					mx.controls.Alert.show("Sending NON JAL: " + fltsToGetAvail.length + ";  Left: " + fltsPendingAvail.length);
-					connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsToGetAvail);
+					alfaRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsToGetAvail);
 					fltsToGetAvail.removeAll();
 					}
 				else{
 //					mx.controls.Alert.show("Sending JAL: " + fltsPendingAvail.length);
-					connectionAdvisorRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsPendingAvail);
+					alfaRemoteObject.getOperation('getCabinAvailabiliyMulti').send(fltsPendingAvail);
 					fltsPendingAvail.removeAll();
 					}
 				
@@ -924,7 +929,7 @@
 			<s:Spacer width="10%"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
-					 text="Build Date: 17MAR2014" click="getBackEndBuildDate()"/>
+					 text="Build Date: 06MAY2014" click="getBackEndBuildDate()"/>
 			
 			<s:Spacer width="100%"/>
 			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic" fontWeight="bold"/>

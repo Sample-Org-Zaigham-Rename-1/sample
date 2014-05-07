@@ -11,8 +11,6 @@ package com.aa.rpt.apps.owr.vo
 		public var flightNumber:String;
 		public var departureTime:String;
 		public var arrivalTime:String;
-		public var scheduledTimeInGMT:String;
-		public var miles:String;
 		
 		public var seats:int;
 		public var cabinData:String;

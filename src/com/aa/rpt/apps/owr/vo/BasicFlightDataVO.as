@@ -5,10 +5,10 @@ package com.aa.rpt.apps.owr.vo
 	public class BasicFlightDataVO
 	{
 		public var clientIndex:int;
+		public var airlineCode:String;
 		public var flightNumber:String;
+		public var flightDate:String;
 		public var depSta:String;
 		public var arvSta:String;
-		public var flightDate:String;
-		public var airlineCode:String; 
 	}
 }
