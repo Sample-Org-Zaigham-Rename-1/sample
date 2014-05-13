@@ -155,10 +155,10 @@
 								
 							cabinData.visible=true;
 							leg1airline.source = setAirlineImage(fltVO1.airline);;
-							airlineFltnumFlt1.text = fltVO1.airline+fltVO1.flightNumber;
-							depArvFlt1.text=fltVO1.departureStation+" "+fltVO1.arrivalStation;
-							depTimeFlt1.text=fltVO1.departureTime.substr(6,2) + "/" + fltVO1.departureTime.substr(8,4);
-							arvTimeFlt1.text=fltVO1.arrivalTime.substr(6,2) + "/" + fltVO1.arrivalTime.substr(8,4);
+							airlineFltnumFlt1.text = fltVO1.airline+fltVO1.fltNum;
+							depArvFlt1.text=fltVO1.depSta+" "+fltVO1.arvSta;
+							depTimeFlt1.text=fltVO1.latestDepTime.substr(6,2) + "/" + fltVO1.latestDepTime.substr(8,4);
+							arvTimeFlt1.text=fltVO1.latestArvTime.substr(6,2) + "/" + fltVO1.latestArvTime.substr(8,4);
 							
 							if(route.mctConx1 != null)
 								 mctFlt1.text = route.mctConx1;
@@ -183,25 +183,25 @@
 							leg2airline.visible=true;
 							conx1Image.visible=true;
 							cabinData1.visible=true;
-							airlineFltnumFlt2.text = fltVO2.airline+fltVO2.flightNumber;
-							depArvFlt2.text=fltVO2.departureStation+" "+fltVO2.arrivalStation;
-							depTimeFlt2.text=fltVO2.departureTime.substr(6,2) + "/" + fltVO2.departureTime.substr(8,4);
-							arvTimeFlt2.text=fltVO2.arrivalTime.substr(6,2) + "/" + fltVO2.arrivalTime.substr(8,4);
+							airlineFltnumFlt2.text = fltVO2.airline+fltVO2.fltNum;
+							depArvFlt2.text=fltVO2.depSta+" "+fltVO2.arvSta;
+							depTimeFlt2.text=fltVO2.latestDepTime.substr(6,2) + "/" + fltVO2.latestDepTime.substr(8,4);
+							arvTimeFlt2.text=fltVO2.latestArvTime.substr(6,2) + "/" + fltVO2.latestArvTime.substr(8,4);
 							
 							if(route.mctConx2 != null)
 								 mctFlt2.text = route.mctConx2;
 								
-							var leg1ArvTime:Date= new Date(Number(fltVO1.arrivalTime.substr(0,4)),
-								Number(fltVO1.arrivalTime.substr(4,2)),
-								Number(fltVO1.arrivalTime.substr(6,2)),
-								Number(fltVO1.arrivalTime.substr(8,2)),
-								Number(fltVO1.arrivalTime.substr(10,2)));
+							var leg1ArvTime:Date= new Date(Number(fltVO1.latestArvTime.substr(0,4)),
+								Number(fltVO1.latestArvTime.substr(4,2)),
+								Number(fltVO1.latestArvTime.substr(6,2)),
+								Number(fltVO1.latestArvTime.substr(8,2)),
+								Number(fltVO1.latestArvTime.substr(10,2)));
 								
-							var leg2DepTime:Date= new Date(Number(fltVO2.departureTime.substr(0,4)),
-								Number(fltVO2.departureTime.substr(4,2)),
-								Number(fltVO2.departureTime.substr(6,2)),
-								Number(fltVO2.departureTime.substr(8,2)),
-								Number(fltVO2.departureTime.substr(10,2)));
+							var leg2DepTime:Date= new Date(Number(fltVO2.latestDepTime.substr(0,4)),
+								Number(fltVO2.latestDepTime.substr(4,2)),
+								Number(fltVO2.latestDepTime.substr(6,2)),
+								Number(fltVO2.latestDepTime.substr(8,2)),
+								Number(fltVO2.latestDepTime.substr(10,2)));
 								
 							conxTime1.text= timeFormat(((leg2DepTime.time-leg1ArvTime.time)/60000));
 								
@@ -225,22 +225,22 @@
 							leg3airline.visible=true;
 							conx2Image.visible=true;
 							cabinData2.visible=true;
-							airlineFltnumFlt3.text = fltVO3.airline+fltVO3.flightNumber;
-							depArvFlt3.text=fltVO3.departureStation+" "+fltVO3.arrivalStation;
-							depTimeFlt3.text=fltVO3.departureTime.substr(6,2) + "/" + fltVO3.departureTime.substr(8,4);
-							arvTimeFlt3.text=fltVO3.arrivalTime.substr(6,2) + "/" + fltVO3.arrivalTime.substr(8,4);
+							airlineFltnumFlt3.text = fltVO3.airline+fltVO3.fltNum;
+							depArvFlt3.text=fltVO3.depSta+" "+fltVO3.arvSta;
+							depTimeFlt3.text=fltVO3.latestDepTime.substr(6,2) + "/" + fltVO3.latestDepTime.substr(8,4);
+							arvTimeFlt3.text=fltVO3.latestArvTime.substr(6,2) + "/" + fltVO3.latestArvTime.substr(8,4);
 								
-							var leg2ArvTime:Date= new Date(Number(fltVO2.arrivalTime.substr(0,4)),
-								Number(fltVO2.arrivalTime.substr(4,2)),
-								Number(fltVO2.arrivalTime.substr(6,2)),
-								Number(fltVO2.arrivalTime.substr(8,2)),
-								Number(fltVO2.arrivalTime.substr(10,2)));
+							var leg2ArvTime:Date= new Date(Number(fltVO2.latestArvTime.substr(0,4)),
+								Number(fltVO2.latestArvTime.substr(4,2)),
+								Number(fltVO2.latestArvTime.substr(6,2)),
+								Number(fltVO2.latestArvTime.substr(8,2)),
+								Number(fltVO2.latestArvTime.substr(10,2)));
 								
-							var leg3DepTime:Date =new Date(Number(fltVO3.departureTime.substr(0,4)),
-								Number(fltVO3.departureTime.substr(4,2)),
-								Number(fltVO3.departureTime.substr(6,2)),
-								Number(fltVO3.departureTime.substr(8,2)),
-								Number(fltVO3.departureTime.substr(10,2)));
+							var leg3DepTime:Date =new Date(Number(fltVO3.latestDepTime.substr(0,4)),
+								Number(fltVO3.latestDepTime.substr(4,2)),
+								Number(fltVO3.latestDepTime.substr(6,2)),
+								Number(fltVO3.latestDepTime.substr(8,2)),
+								Number(fltVO3.latestDepTime.substr(10,2)));
 								
 							conxTime2.text= timeFormat(((leg3DepTime.time-leg2ArvTime.time)/60000));
 								
