@@ -929,7 +929,7 @@
 			<s:Spacer width="10%"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
-					 text="Build Date: 07MAY2014" click="getBackEndBuildDate()"/>
+					 text="{'Build Date: ' + ALFA::buildDate}" click="getBackEndBuildDate()"/>
 			
 			<s:Spacer width="100%"/>
 			<s:Label id="tiUser" fontFamily="Verdana" fontSize="10" fontStyle="italic" fontWeight="bold"/>
