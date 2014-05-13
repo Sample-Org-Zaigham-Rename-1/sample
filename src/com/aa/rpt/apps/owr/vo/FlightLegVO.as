@@ -5,20 +5,14 @@ package com.aa.rpt.apps.owr.vo
 	[RemoteClass(alias="com.aa.rpt.connectionbuilder.vo.FlightLegVO")]
 	public class FlightLegVO
 	{
-		public var departureStation:String;
-		public var arrivalStation:String;
+		public var depSta:String;
+		public var arvSta:String;
 		public var airline:String;
-		public var flightNumber:String;
-		public var departureTime:String;
-		public var arrivalTime:String;
+		public var fltNum:String;
+		public var latestDepTime:String;
+		public var latestArvTime:String;
 		
 		public var seats:int;
 		public var cabinData:String;
-		
-		public function toString():String{
-			return airline+' '+flightNumber+' '+departureStation+' '+arrivalStation;
-		}
-		
 	}
-	
 }

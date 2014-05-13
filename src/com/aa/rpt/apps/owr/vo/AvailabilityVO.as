@@ -14,5 +14,8 @@ package com.aa.rpt.apps.owr.vo
 		public var classAvailW:int;
 		public var classAvailE:int;
 		public var classAvailX:int;
+		
+		public var clientIndex:int;
+		public var status:String;
 	}
 }
