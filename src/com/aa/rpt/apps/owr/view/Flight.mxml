@@ -4,10 +4,12 @@
 		xmlns:s="library://ns.adobe.com/flex/spark" 
 		xmlns:mx="library://ns.adobe.com/flex/mx"
 		height="100%" width="100%"
-		icon="{IconUtil.flt}">
+		icon="{fltIcon}">
 	<fx:Script>
 		<![CDATA[
-			import com.aa.rpt.apps.owr.utils.IconUtil;
+			[Embed(source="images/byFLT.png")]
+			[Bindable]
+			public static var fltIcon:Class;
 		]]>
 	</fx:Script>
 	

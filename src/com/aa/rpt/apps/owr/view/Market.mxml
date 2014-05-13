@@ -7,19 +7,19 @@
 		xmlns:component="component.*" 
 		xmlns:components="com.aa.rpt.connectionbuilder.view.components.*" 
 		xmlns:view="com.aa.rpt.apps.owr.view.*"
-		icon="{IconUtil.market}">
+		icon="{mktIcon}">
 		<!-- creationComplete="setDepatureEndDate()" -->
 	<fx:Script>
 		<![CDATA[
-			import com.aa.rpt.apps.owr.utils.IconUtil;
-			
 			import mx.events.ItemClickEvent;
-			import mx.utils.StringUtil;
-			
-			import spark.events.TextOperationEvent;
 			
 			[Embed(source="images/swap.png")]
-			[Bindable]static private var swap:Class;
+			[Bindable]
+			static private var swap:Class;
+			
+			[Embed(source="images/byMKT.png")]
+			[Bindable]
+			public static var mktIcon:Class;
 			
 			public function setDepatureEndDate():void
 			{
