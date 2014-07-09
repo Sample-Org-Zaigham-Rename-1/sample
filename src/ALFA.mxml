@@ -158,10 +158,15 @@
 					}
 				
 				if(xml == null)
+					{
+					tiUser.text = "Unknown User [No Role]";
 					userInfo = "?,?,?,?";
+					curSystem.text = "System: Unknown";
+					}
 				else{
 					tiUser.text = xml..firstName + " " + xml..lastName + " [" + xml..userRole + "]";
 					userInfo = xml..userId + "," + xml..lastName + "," + xml..firstName + "," + xml..userRole;
+					curSystem.text = "System: " + String(xml..system).toUpperCase(); 
 					}
 			}
 			
@@ -927,6 +932,8 @@
 			</s:HGroup>
 			
 			<s:Spacer width="10%"/>
+			<s:Label id="curSystem" color="#00009C" fontFamily="Verdana" fontSize="10" fontStyle="normal" fontWeight="bold"/>
+			<s:Spacer  width="20"/>
 			<s:Label color="#00009C" fontFamily="Verdana" fontSize="10"
 					 fontStyle="normal" fontWeight="bold"
 					 text="{'Build Date: ' + ALFA::buildDate}" click="getBackEndBuildDate()"/>
