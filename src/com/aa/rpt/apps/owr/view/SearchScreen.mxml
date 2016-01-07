@@ -100,7 +100,7 @@
 					market.IBCB.selected = (mktParms.validAirlines == null || mktParms.validAirlines.indexOf("IB") < 0 ? false : true);
 					market.JLCB.selected = (mktParms.validAirlines == null || mktParms.validAirlines.indexOf("JL") < 0 ? false : true);
 					market.AYCB.selected = (mktParms.validAirlines == null || mktParms.validAirlines.indexOf("AY") < 0 ? false : true);
-					market.USCB.selected = (mktParms.validAirlines == null || mktParms.validAirlines.indexOf("US") < 0 ? false : true);
+					//market.USCB.selected = (mktParms.validAirlines == null || mktParms.validAirlines.indexOf("US") < 0 ? false : true);
 					
 					market.leginfo.value = mktParms.numConx;
 					market.sup_av_mkt.selected = mktParms.suppressAvail;
@@ -196,8 +196,8 @@
 						marketCarrierClause += market.JLCB.label + ',';
 					if(market.AYCB.selected)
 						marketCarrierClause += market.AYCB.label + ',';
-					if(market.USCB.selected)
-						marketCarrierClause += market.USCB.label + ',';
+//					if(market.USCB.selected)
+//						marketCarrierClause += market.USCB.label + ',';
 						
 					marketCarrierClause = marketCarrierClause.substr(0, marketCarrierClause.length-1);
 						

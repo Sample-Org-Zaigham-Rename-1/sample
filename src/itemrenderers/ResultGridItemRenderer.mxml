@@ -52,8 +52,8 @@
 					theLogo = jlLogo;
 				else if(airlinecode == 'AY')
 					theLogo = ayLogo;
-				else if(airlinecode == 'US')
-					theLogo= usLogo;
+//				else if(airlinecode == 'US')
+//					theLogo= usLogo;
 				else theLogo = null;
 				
 				return theLogo;

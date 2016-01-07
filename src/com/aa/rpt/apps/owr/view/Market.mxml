@@ -206,7 +206,7 @@
 				<s:CheckBox id="IBCB" label="IB"/>
 				<s:CheckBox id="JLCB" label="JL"/>
 				<s:CheckBox id="AYCB" label="AY"/>
-				<s:CheckBox id="USCB" label="US"/>
+				<!--s:CheckBox id="USCB" label="US"/-->
 			</s:HGroup>
 			<s:Label text="(No Selection Includes ALL)" fontSize="10"/>
 		</s:FormItem>

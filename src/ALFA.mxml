@@ -387,7 +387,7 @@
 				fIB.selected = false;
 				fJL.selected = false;
 				fAY.selected = false; 
-				fUS.selected = false;  
+//				fUS.selected = false;  
 				fnonstop.selected = false;
 				fonestop.selected = false;
 				ftwostops.selected = false;
@@ -823,8 +823,8 @@
 				if(fAY.selected)
 					filterAirlineCodes.push("AY") 
 						
-				if(fUS.selected)
-					filterAirlineCodes.push("US");  
+//				if(fUS.selected)
+//					filterAirlineCodes.push("US");  
 
 				filterAirlineCodes.sort();
 				
@@ -889,7 +889,7 @@
 				fIB.selected = false;
 				fJL.selected = false;
 				fAY.selected = false; 
-				fUS.selected = false;  
+//				fUS.selected = false;  
 				fnonstop.selected = false;
 				fonestop.selected = false;
 				ftwostops.selected = false;
@@ -1070,7 +1070,7 @@
 								<s:HGroup>
 									<s:CheckBox id="fJL" label="JL" change="{performFilter()}"/>
 									<s:CheckBox id="fAY" label="AY" change="{performFilter()}"/>
-									<s:CheckBox id="fUS" label="US" change="{performFilter()}"/>
+									<!--<s:CheckBox id="fUS" label="US" change="{performFilter()}"/>-->
 								</s:HGroup>								
 								
 								<s:Spacer height="4"/>

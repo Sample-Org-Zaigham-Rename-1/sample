@@ -50,7 +50,7 @@
 			<s:RadioButton groupName="flt_al_RCB" label="IB" />
 			<s:RadioButton groupName="flt_al_RCB" label="JL" />
 			<s:RadioButton groupName="flt_al_RCB" label="AY" />
-			<s:RadioButton groupName="flt_al_RCB" label="US" />
+			<!--<s:RadioButton groupName="flt_al_RCB" label="US" />-->
 		</s:FormItem>
 		
 		<s:FormItem label="Suppress Availabilty:" textAlign="right">
