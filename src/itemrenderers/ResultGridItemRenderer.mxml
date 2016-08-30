@@ -78,6 +78,24 @@
 				rowNum.text = String(rowIndex + 1);
 			}
 			
+			
+			public function getTerminalsText(fltVO1:FlightLegVO,fltVO2:FlightLegVO):String{
+				var terminalText:String = '';
+				if(fltVO1.arrivalTerminal != null &&fltVO1.arrivalTerminal != ''){
+					terminalText = terminalText+fltVO1.arrivalTerminal+':';
+				}else{
+					terminalText = terminalText+'--:';
+				}
+				
+				if(fltVO2.departureTerminal != null &&fltVO2.departureTerminal != ''){
+					terminalText = terminalText+fltVO2.departureTerminal;
+				}else{
+					terminalText = terminalText+'--';
+				}
+				
+			return terminalText;
+			}
+			
 			override public function set data(value:Object):void
 			{
 				super.data = value;
@@ -114,6 +132,8 @@
 				count='-?-';
 				mctFlt1.text='';
 				mctFlt2.text='';
+				terminals1.text = '';
+				terminals2.text = '';
 
 				var route:RouteVO = data as RouteVO
 				var fltVO1:FlightLegVO = null;
@@ -187,6 +207,7 @@
 							depArvFlt2.text=fltVO2.depSta+" "+fltVO2.arvSta;
 							depTimeFlt2.text=fltVO2.latestDepTime.substr(6,2) + "/" + fltVO2.latestDepTime.substr(8,4);
 							arvTimeFlt2.text=fltVO2.latestArvTime.substr(6,2) + "/" + fltVO2.latestArvTime.substr(8,4);
+							terminals1.text = getTerminalsText(fltVO1,fltVO2);
 							
 							if(route.mctConx2 != null)
 								 mctFlt2.text = route.mctConx2;
@@ -229,7 +250,7 @@
 							depArvFlt3.text=fltVO3.depSta+" "+fltVO3.arvSta;
 							depTimeFlt3.text=fltVO3.latestDepTime.substr(6,2) + "/" + fltVO3.latestDepTime.substr(8,4);
 							arvTimeFlt3.text=fltVO3.latestArvTime.substr(6,2) + "/" + fltVO3.latestArvTime.substr(8,4);
-								
+							terminals2.text = getTerminalsText(fltVO2,fltVO3);	
 							var leg2ArvTime:Date= new Date(Number(fltVO2.latestArvTime.substr(0,4)),
 								Number(fltVO2.latestArvTime.substr(4,2)),
 								Number(fltVO2.latestArvTime.substr(6,2)),
@@ -306,7 +327,9 @@
 			<s:Image id="conx1Image" source="{rArrow}" visible="false"/>
 			<s:Spacer height="3"/>
 			<s:Label id="mctFlt1" toolTip="Minimum Connect Time" color="blue" fontSize="13" fontWeight="normal"/>
+			<s:Label id="terminals1" toolTip="Connection Point Terminals" color="red" fontSize="13" fontWeight="normal"/>
 		</s:VGroup>
+
 		
 		<s:Image id="leg2airline" visible="false"/>
 		
@@ -334,6 +357,7 @@
 			<s:Image id="conx2Image" source="{rArrow}" visible="false"/>
 			<s:Spacer height="3"/>
 			<s:Label id="mctFlt2" toolTip="Minimum Connect Time" color="blue" fontSize="13" fontWeight="normal"/>
+			<s:Label id="terminals2" toolTip="Connection Point Terminals" color="red" fontSize="13" fontWeight="normal"/>
 		</s:VGroup>
 		
 		<s:Image id="leg3airline" visible="false"/>
