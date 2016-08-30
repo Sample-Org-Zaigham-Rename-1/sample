@@ -14,5 +14,7 @@ package com.aa.rpt.apps.owr.vo
 		
 		public var seats:int;
 		public var cabinData:String;
+		public var departureTerminal:String;
+		public var arrivalTerminal:String;
 	}
 }
